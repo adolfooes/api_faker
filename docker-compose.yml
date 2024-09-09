@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      FAKER_DATABASE_URL: ${FAKER_DATABASE_URL}
+    networks:
+      - api_faker_network
+
+  db:
+    image: postgres:13-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: api_faker
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    networks:
+      - api_faker_network
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+networks:
+  api_faker_network:
+    driver: bridge
+
+volumes:
+  db_data:
