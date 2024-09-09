@@ -3,43 +3,109 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+
+	"github.com/adolfooes/api_faker/pkg/utils/crud"
+	"github.com/adolfooes/api_faker/pkg/utils/response"
 )
 
-// GetProjects handles the request to retrieve all projects
-func GetProjects(w http.ResponseWriter, r *http.Request) {
-	projects := []map[string]interface{}{
-		{"id": 1, "name": "Project A"},
-		{"id": 2, "name": "Project B"},
+// Project represents the project structure
+type Project struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// CreateProjectHandler handles the creation of a new project
+func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
+	var project Project
+
+	// Decode the request body into the project struct
+	err := json.NewDecoder(r.Body).Decode(&project)
+	if err != nil {
+		response.SendResponse(w, "Invalid request payload", err.Error(), nil, nil)
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(projects)
+	// Insert the new project into the database using the crud package
+	columns := []string{"name", "description"}
+	values := []interface{}{project.Name, project.Description}
+	err = crud.Create("project", columns, values)
+	if err != nil {
+		response.SendResponse(w, "Failed to create project", err.Error(), nil, nil)
+		return
+	}
+
+	response.SendResponse(w, "Project created successfully", "", project, nil)
 }
 
-// GetProject handles the request to retrieve a single project by ID
-func GetProject(w http.ResponseWriter, r *http.Request) {
-	// Example of retrieving project by ID
-	project := map[string]interface{}{"id": 1, "name": "Project A"}
+// GetAllProjectsHandler retrieves all projects from the database
+func GetAllProjectsHandler(w http.ResponseWriter, r *http.Request) {
+	filters := map[string]interface{}{} // No filters, get all projects
+	results, err := crud.List("project", filters)
+	if err != nil {
+		response.SendResponse(w, "Failed to retrieve projects", err.Error(), nil, nil)
+		return
+	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(project)
+	response.SendResponse(w, "Projects retrieved successfully", "", results, nil)
 }
 
-// CreateProject handles the creation of a new project
-func CreateProject(w http.ResponseWriter, r *http.Request) {
-	// Logic to create a new project
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Project created"))
+// GetProjectHandler retrieves a single project by ID from the database
+func GetProjectHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.SendResponse(w, "Invalid ID parameter", err.Error(), nil, nil)
+		return
+	}
+
+	result, err := crud.Read("project", id)
+	if err != nil {
+		response.SendResponse(w, "Failed to retrieve project", err.Error(), nil, nil)
+		return
+	}
+
+	response.SendResponse(w, "Project retrieved successfully", "", result, nil)
 }
 
-// UpdateProject handles the updating of an existing project by ID
-func UpdateProject(w http.ResponseWriter, r *http.Request) {
-	// Logic to update a project by ID
-	w.Write([]byte("Project updated"))
+// UpdateProjectHandler handles updating an existing project
+func UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
+	var project Project
+	err := json.NewDecoder(r.Body).Decode(&project)
+	if err != nil {
+		response.SendResponse(w, "Invalid request payload", err.Error(), nil, nil)
+		return
+	}
+
+	// Update the project in the database using the crud package
+	updates := map[string]interface{}{
+		"name":        project.Name,
+		"description": project.Description,
+	}
+	err = crud.Update("project", project.ID, updates)
+	if err != nil {
+		response.SendResponse(w, "Failed to update project", err.Error(), nil, nil)
+		return
+	}
+
+	response.SendResponse(w, "Project updated successfully", "", project, nil)
 }
 
-// DeleteProject handles the deletion of a project by ID
-func DeleteProject(w http.ResponseWriter, r *http.Request) {
-	// Logic to delete a project by ID
-	w.Write([]byte("Project deleted"))
+// DeleteProjectHandler handles deleting a project
+func DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		response.SendResponse(w, "Invalid ID parameter", err.Error(), nil, nil)
+		return
+	}
+
+	err = crud.Delete("project", id)
+	if err != nil {
+		response.SendResponse(w, "Failed to delete project", err.Error(), nil, nil)
+		return
+	}
+
+	response.SendResponse(w, "Project deleted successfully", "", nil, nil)
 }

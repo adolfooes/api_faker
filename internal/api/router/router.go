@@ -10,24 +10,37 @@ func InitializeRouter() *mux.Router {
 	router := mux.NewRouter()
 
 	// Account-related routes
-	router.HandleFunc("/accounts", handler.GetAccounts).Methods("GET")
-	router.HandleFunc("/accounts/{id:[0-9]+}", handler.GetAccount).Methods("GET")
-	router.HandleFunc("/accounts", handler.CreateAccount).Methods("POST")
-	router.HandleFunc("/accounts/{id:[0-9]+}", handler.UpdateAccount).Methods("PUT")
-	router.HandleFunc("/accounts/{id:[0-9]+}", handler.DeleteAccount).Methods("DELETE")
+	router.HandleFunc("/account", handler.GetAllAccountsHandler).Methods("GET")
+	router.HandleFunc("/account/{id:[0-9]+}", handler.GetAccountHandler).Methods("GET")
+	router.HandleFunc("/account", handler.CreateAccountHandler).Methods("POST")
+	router.HandleFunc("/account/{id:[0-9]+}", handler.UpdateAccountHandler).Methods("PUT")
+	router.HandleFunc("/account/{id:[0-9]+}", handler.DeleteAccountHandler).Methods("DELETE")
 
 	// Project-related routes
-	router.HandleFunc("/projects", handler.GetProjects).Methods("GET")
-	router.HandleFunc("/projects/{id:[0-9]+}", handler.GetProject).Methods("GET")
-	router.HandleFunc("/projects", handler.CreateProject).Methods("POST")
-	router.HandleFunc("/projects/{id:[0-9]+}", handler.UpdateProject).Methods("PUT")
-	router.HandleFunc("/projects/{id:[0-9]+}", handler.DeleteProject).Methods("DELETE")
+	router.HandleFunc("/project", handler.GetAllProjectsHandler).Methods("GET")
+	router.HandleFunc("/project/{id:[0-9]+}", handler.GetProjectHandler).Methods("GET")
+	router.HandleFunc("/project", handler.CreateProjectHandler).Methods("POST")
+	router.HandleFunc("/project/{id:[0-9]+}", handler.UpdateProjectHandler).Methods("PUT")
+	router.HandleFunc("/project/{id:[0-9]+}", handler.DeleteProjectHandler).Methods("DELETE")
 
-	// Mock-related routes (for testing)
-	router.HandleFunc("/mocks", handler.GetMock).Methods("GET")
-	router.HandleFunc("/mocks", handler.CreateMock).Methods("POST")
-	router.HandleFunc("/mocks", handler.UpdateMock).Methods("PUT")
-	router.HandleFunc("/mocks", handler.DeleteMock).Methods("DELETE")
+	// URL Config-related routes
+	router.HandleFunc("/url_config", handler.GetAllURLConfigsHandler).Methods("GET")
+	router.HandleFunc("/url_config/{id:[0-9]+}", handler.GetURLConfigHandler).Methods("GET")
+	router.HandleFunc("/url_config", handler.CreateURLConfigHandler).Methods("POST")
+	router.HandleFunc("/url_config/{id:[0-9]+}", handler.UpdateURLConfigHandler).Methods("PUT")
+	router.HandleFunc("/url_config/{id:[0-9]+}", handler.DeleteURLConfigHandler).Methods("DELETE")
+
+	// URL HTTP Status-related routes
+	router.HandleFunc("/url_http_status", handler.GetAllURLHTTPStatusesHandler).Methods("GET")
+	router.HandleFunc("/url_http_status", handler.CreateURLHTTPStatusHandler).Methods("POST")
+	router.HandleFunc("/url_http_status/{id:[0-9]+}", handler.UpdateURLHTTPStatusHandler).Methods("PUT")
+	router.HandleFunc("/url_http_status/{id:[0-9]+}", handler.DeleteURLHTTPStatusHandler).Methods("DELETE")
+
+	// Response Model-related routes
+	router.HandleFunc("/response_model", handler.GetAllResponseModelsHandler).Methods("GET")
+	router.HandleFunc("/response_model", handler.CreateResponseModelHandler).Methods("POST")
+	router.HandleFunc("/response_model/{id:[0-9]+}", handler.UpdateResponseModelHandler).Methods("PUT")
+	router.HandleFunc("/response_model/{id:[0-9]+}", handler.DeleteResponseModelHandler).Methods("DELETE")
 
 	return router
 }
