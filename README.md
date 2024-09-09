@@ -1,6 +1,7 @@
+
 # API Faker
 
-API Faker is a RESTful API built with Go that provides endpoints for managing accounts and projects. The project uses PostgreSQL as the database and features dynamic configuration using environment variables.
+API Faker is a RESTful API built with Go that helps developers mock or fake API responses. It allows for configurable responses based on different HTTP statuses and provides flexibility in testing various scenarios. The project uses PostgreSQL as the database and features dynamic configuration using environment variables. It supports both local and production environments using Docker.
 
 ## Features
 
@@ -8,12 +9,15 @@ API Faker is a RESTful API built with Go that provides endpoints for managing ac
 - PostgreSQL database connection
 - Modular project structure
 - Configurable using environment variables
+- Local and production Docker configurations
+- Secrets management for sensitive data using environment variables
 - Simple mock endpoints for testing
 
 ## Requirements
 
 - [Go](https://golang.org/doc/install) 1.18 or later
 - [PostgreSQL](https://www.postgresql.org/download/) (running locally or on a remote server)
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
 
 ## Setup
 
@@ -21,17 +25,20 @@ API Faker is a RESTful API built with Go that provides endpoints for managing ac
 
 Clone the repository to your local machine:
 
+\`\`\`bash
 git clone https://github.com/adolfooes/api_faker.git
-
 cd api_faker
+\`\`\`
 
 ### 2. Install Go Modules
 
 Install the Go dependencies required for the project:
 
+\`\`\`bash
 go mod tidy
+\`\`\`
 
-This will ensure that all dependencies specified in `go.mod` are installed.
+This will ensure that all dependencies specified in \`go.mod\` are installed.
 
 ### 3. Setup PostgreSQL
 
@@ -39,87 +46,122 @@ This will ensure that all dependencies specified in `go.mod` are installed.
 
 Make sure you have PostgreSQL installed and running. Create a new PostgreSQL database for the project:
 
+\`\`\`bash
 createdb api_faker_db
+\`\`\`
 
-You can replace `api_faker_db` with the name of your choice.
+You can replace \`api_faker_db\` with the name of your choice.
 
-#### Configure PostgreSQL Connection
+### 4. Configure Environment Variables
 
-Set up the connection to your PostgreSQL database. You will use an environment variable called `DATABASE_URL` to store the connection string.
+#### Local Development
 
-The format of the connection string is:
+For local development, environment variables are stored in a \`config.env\` file under the \`config/\` directory.
 
-postgres://username:password@localhost:5432/dbname?sslmode=disable
+**Example \`config/config.env\`:**
 
-Replace `username`, `password`, `localhost`, and `dbname` with your PostgreSQL credentials.
+\`\`\`env
+FAKER_DATABASE_URL=postgres://postgres:password@db:5432/api_faker_dev?sslmode=disable
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=password
+POSTGRES_DB=api_faker_dev
+\`\`\`
 
-### 4. Set Environment Variable
+### 5. Run the Project Locally with Docker
 
-#### On Linux/macOS
+You can run the application in a local development environment using Docker Compose:
 
-You can export the `DATABASE_URL` as an environment variable in your shell:
+\`\`\`bash
+make run-local
+\`\`\`
 
-export DATABASE_URL="postgres://username:password@localhost:5432/api_faker_db?sslmode=disable"
+This command will start the app and PostgreSQL database containers using the local Docker Compose configuration (\`docker-compose-local.yml\`).
 
-#### On Windows
+To stop the containers:
 
-Set the environment variable in your terminal:
+\`\`\`bash
+make stop-local
+\`\`\`
 
-set DATABASE_URL=postgres://username:password@localhost:5432/api_faker_db?sslmode=disable
+### 6. Run the Project in Production
 
-Make sure to replace `username`, `password`, and `dbname` with your actual PostgreSQL credentials.
+To run the project in a production-like environment using Docker Compose:
 
-### 5. Run the Project
+\`\`\`bash
+make run-prod
+\`\`\`
 
-Once your environment is configured and the database is set up, run the project with the following command:
+This command will use \`docker-compose.yml\` to start the app and database containers for production.
 
-go run cmd/main.go
+To stop the containers:
 
-You should see the output:
+\`\`\`bash
+make stop-prod
+\`\`\`
 
-Server is running on port 8080
+### 7. Running Migrations
 
-Database connection established successfully
+To apply the database migrations, use the following commands:
 
-The server will be running on `http://localhost:8080`.
+- For local development:
+
+  \`\`\`bash
+  make migrate-local
+  \`\`\`
+
+- For production:
+
+  \`\`\`bash
+  make migrate-prod
+  \`\`\`
+
+### 8. Running Tests
+
+To run unit tests:
+
+- For local development:
+
+  \`\`\`bash
+  make test-local
+  \`\`\`
+
+- For production:
+
+  \`\`\`bash
+  make test-prod
+  \`\`\`
 
 ## API Endpoints
 
 ### Accounts
 
-- `GET /accounts`: Retrieve all accounts
-- `GET /accounts/{id}`: Retrieve a single account by ID
-- `POST /accounts`: Create a new account
-- `PUT /accounts/{id}`: Update an account by ID
-- `DELETE /accounts/{id}`: Delete an account by ID
+- \`GET /accounts\`: Retrieve all accounts
+- \`GET /accounts/{id}\`: Retrieve a single account by ID
+- \`POST /accounts\`: Create a new account
+- \`PUT /accounts/{id}\`: Update an account by ID
+- \`DELETE /accounts/{id}\`: Delete an account by ID
 
 ### Projects
 
-- `GET /projects`: Retrieve all projects
-- `GET /projects/{id}`: Retrieve a single project by ID
-- `POST /projects`: Create a new project
-- `PUT /projects/{id}`: Update a project by ID
-- `DELETE /projects/{id}`: Delete a project by ID
-
-### Mock Data (for testing)
-
-- `GET /mocks`: Retrieve mock data
-- `POST /mocks`: Create mock data
-- `PUT /mocks`: Update mock data
-- `DELETE /mocks`: Delete mock data
+- \`GET /projects\`: Retrieve all projects
+- \`GET /projects/{id}\`: Retrieve a single project by ID
+- \`POST /projects\`: Create a new project
+- \`PUT /projects/{id}\`: Update a project by ID
+- \`DELETE /projects/{id}\`: Delete a project by ID
 
 ## Testing the API
 
-You can use `curl`, Postman, or any API client to test the API.
+You can use \`curl\`, Postman, or any API client to test the API.
 
 For example, to retrieve all accounts:
 
+\`\`\`bash
 curl -X GET http://localhost:8080/accounts
+\`\`\`
 
 ## Future Improvements
 
 - Add authentication (JWT, OAuth)
-- Implement more detailed error handling
 - Add more comprehensive unit tests
 
 ## License
