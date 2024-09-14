@@ -1,14 +1,16 @@
 -- Define the ENUM type for HTTP methods
 CREATE TYPE http_method_enum AS ENUM ('GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD');
 
--- Create the url_config table
+-- Create the url_config table with a reference to project (project_id)
 CREATE TABLE url_config (
     id SERIAL PRIMARY KEY,
     path VARCHAR(255) NOT NULL,
     method http_method_enum NOT NULL,
     description TEXT,
+    project_id INT NOT NULL, -- Add project_id column
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE -- Foreign key to project table
 );
 
 -- Create the url_http_status table
