@@ -50,5 +50,8 @@ func InitializeRouter() *mux.Router {
 	securedRoutes.HandleFunc("/response_model/{id:[0-9]+}", handler.UpdateResponseModelHandler).Methods("PUT")
 	securedRoutes.HandleFunc("/response_model/{id:[0-9]+}", handler.DeleteResponseModelHandler).Methods("DELETE")
 
+	// Mock response route under /api
+	securedRoutes.HandleFunc("/mock/{path:.*}", handler.MockHandler).Methods("GET", "POST", "PUT", "DELETE", "PATCH")
+
 	return router
 }
