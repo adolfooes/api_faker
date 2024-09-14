@@ -18,13 +18,19 @@ func SendResponse(w http.ResponseWriter, statusCode int, message string, stack s
 	w.WriteHeader(statusCode) // Set the HTTP status code
 
 	if returnOnlyMockedValue {
-		// Send the mocked JSON data
-		if mockData, ok := data.(string); ok {
-			w.Write([]byte(mockData))
-		} else {
-			// If data is not a string, handle error
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error": "Invalid mock data"}`))
+		// Handle if the mock data is a string or already JSON-encoded object
+		switch v := data.(type) {
+		case string:
+			// Write string data directly
+			w.Write([]byte(v))
+		case []byte:
+			// Write byte slice (in case the mock data is a raw JSON byte array)
+			w.Write(v)
+		default:
+			// Assume it's a JSON object and encode it
+			if err := json.NewEncoder(w).Encode(data); err != nil {
+				w.Write([]byte(`{"error": "Invalid mock data"}`))
+			}
 		}
 		return
 	}
