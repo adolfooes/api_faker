@@ -37,6 +37,7 @@ func Create(table string, columns []string, values []interface{}) (map[string]in
 	}
 
 	// Create slices to store the row's values dynamically
+	// TODO: | @LBU5 : translate ENUM values to string
 	valuesPtrs := make([]interface{}, len(columns))
 	valuesArr := make([]interface{}, len(columns))
 	for i := range valuesPtrs {

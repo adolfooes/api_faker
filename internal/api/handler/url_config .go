@@ -16,6 +16,7 @@ type URLConfig struct {
 	Path        string `json:"path"`
 	Method      string `json:"method"`
 	Description string `json:"description"`
+	ProjectID   int    `json:"project_id"` // Add ProjectID to the struct
 }
 
 // CreateURLConfigHandler handles the creation of a new URL config
@@ -29,9 +30,15 @@ func CreateURLConfigHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert the new URL config into the database using the crud package
-	columns := []string{"path", "method", "description"}
-	values := []interface{}{urlConfig.Path, urlConfig.Method, urlConfig.Description}
+	// Ensure project_id is provided in the request body
+	if urlConfig.ProjectID == 0 {
+		response.SendResponse(w, http.StatusBadRequest, "Missing project ID", "Project ID is required", nil, false)
+		return
+	}
+
+	// Insert the new URL config into the database using the crud package, including the project_id
+	columns := []string{"path", "method", "description", "project_id"}
+	values := []interface{}{urlConfig.Path, urlConfig.Method, urlConfig.Description, urlConfig.ProjectID}
 	createdConfig, err := crud.Create("url_config", columns, values) // Fetch the created object
 	if err != nil {
 		response.SendResponse(w, http.StatusInternalServerError, "Failed to create URL config", err.Error(), nil, false)
@@ -90,11 +97,18 @@ func UpdateURLConfigHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Ensure project_id is provided in the update request body
+	if urlConfig.ProjectID == 0 {
+		response.SendResponse(w, http.StatusBadRequest, "Missing project ID", "Project ID is required", nil, false)
+		return
+	}
+
 	// Update the URL config in the database using the crud package
 	updates := map[string]interface{}{
 		"path":        urlConfig.Path,
 		"method":      urlConfig.Method,
 		"description": urlConfig.Description,
+		"project_id":  urlConfig.ProjectID, // Update the project_id as well
 	}
 	updatedConfig, err := crud.Update("url_config", urlConfig.ID, updates) // Fetch the updated object
 	if err != nil {
