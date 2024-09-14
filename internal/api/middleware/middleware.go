@@ -1,13 +1,20 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/adolfooes/api_faker/config"
 )
 
 var jwtSecretKey = []byte("your_secret_key") // Same secret key
+
+// Key to use when setting the account ID in context
+type contextKey string
 
 // JWTMiddleware checks for the token in the Authorization header
 func JWTMiddleware(next http.Handler) http.Handler {
@@ -39,16 +46,19 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// // Optionally: You can check for additional claims here like expiration time (exp)
-		// // For example, if you want to ensure the token has not expired:
-		// if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		// 	if ExpiresAt, ok := claims["exp"].(float64); ok {
-		// 		// Compare exp with current time in Unix format if necessary
-		// 		// e.g., time.Now().Unix() > int64(exp)
-		// 	}
-		// }
+		var accountID string
+		if id, ok := claims["account_id"].(float64); ok {
+			accountID = strconv.FormatInt(int64(id), 10)
+		} else {
+			http.Error(w, "Account ID not found in token or not a float64", http.StatusUnauthorized)
+			return
+		}
 
-		// Token is valid, continue with the request
-		next.ServeHTTP(w, r)
+		// Inject the account ID into the request's context
+		ctx := context.WithValue(r.Context(), config.JWTAccountIDKey, accountID)
+
+		// Continue the request with the new context
+		next.ServeHTTP(w, r.WithContext(ctx))
+
 	})
 }

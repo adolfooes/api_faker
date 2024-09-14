@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/adolfooes/api_faker/config"
 	"github.com/adolfooes/api_faker/pkg/utils/crud"
 	"github.com/adolfooes/api_faker/pkg/utils/response"
 	"github.com/gorilla/mux"
@@ -15,6 +16,7 @@ type Project struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	OwnerID     int64  `json:"owner_id"` // Changed AccountID to OwnerID
 }
 
 // CreateProjectHandler handles the creation of a new project
@@ -28,9 +30,26 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert the new project into the database using the crud package
-	columns := []string{"name", "description"}
-	values := []interface{}{project.Name, project.Description}
+	// Extract the account ID (which will be used as owner_id) from the context (injected by the JWT middleware)
+	ownerIDStr, ok := r.Context().Value(config.JWTAccountIDKey).(string)
+	if !ok {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
+		return
+	}
+
+	// Convert the ownerID from string to int64
+	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	if err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", "", nil, false)
+		return
+	}
+
+	// Add the owner ID to the project (for consistency in future use)
+	project.OwnerID = ownerID
+
+	// Insert the new project into the database, including the owner ID
+	columns := []string{"name", "description", "owner_id"} // Updated to use owner_id
+	values := []interface{}{project.Name, project.Description, ownerID}
 	createdProject, err := crud.Create("project", columns, values) // Fetching the created project object
 	if err != nil {
 		response.SendResponse(w, http.StatusInternalServerError, "Failed to create project", err.Error(), nil, false)

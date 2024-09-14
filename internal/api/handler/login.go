@@ -20,9 +20,10 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
-// Claims represents the structure of the JWT claims
+// Claims represents the structure of the JWT claims, including account_id
 type Claims struct {
-	Email string `json:"email"`
+	Email     string `json:"email"`
+	AccountID int64  `json:"account_id"`
 	jwt.RegisteredClaims
 }
 
@@ -61,12 +62,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the account ID from the account object
+	accountID := account["id"].(int64)
+
 	// Set JWT expiration time
 	expirationTime := time.Now().Add(1 * time.Hour)
 
-	// Create JWT claims, including the user's email and expiration time
+	// Create JWT claims, including the user's email, account_id, and expiration time
 	claims := &Claims{
-		Email: creds.Email,
+		Email:     creds.Email,
+		AccountID: accountID, // Add account ID to the claims
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},
