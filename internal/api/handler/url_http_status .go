@@ -24,20 +24,20 @@ func CreateURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 	// Decode the request body into the URL HTTP status struct
 	err := json.NewDecoder(r.Body).Decode(&status)
 	if err != nil {
-		response.SendResponse(w, "Invalid request payload", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusBadRequest, "Invalid request payload", err.Error(), nil, false)
 		return
 	}
 
 	// Insert the new URL HTTP status into the database using the crud package
 	columns := []string{"url_id", "http_status", "percentage"}
 	values := []interface{}{status.URLID, status.HTTPStatus, status.Percentage}
-	err = crud.Create("url_http_status", columns, values)
+	createdStatus, err := crud.Create("url_http_status", columns, values) // Fetch the created object
 	if err != nil {
-		response.SendResponse(w, "Failed to create HTTP status", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusInternalServerError, "Failed to create HTTP status", err.Error(), nil, false)
 		return
 	}
 
-	response.SendResponse(w, "HTTP status created successfully", "", status, nil)
+	response.SendResponse(w, http.StatusCreated, "HTTP status created successfully", "", createdStatus, false)
 }
 
 // GetAllURLHTTPStatusesHandler retrieves all HTTP statuses from the database
@@ -45,11 +45,11 @@ func GetAllURLHTTPStatusesHandler(w http.ResponseWriter, r *http.Request) {
 	filters := map[string]interface{}{} // No filters, get all HTTP statuses
 	results, err := crud.List("url_http_status", filters)
 	if err != nil {
-		response.SendResponse(w, "Failed to retrieve HTTP statuses", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusInternalServerError, "Failed to retrieve HTTP statuses", err.Error(), nil, false)
 		return
 	}
 
-	response.SendResponse(w, "HTTP statuses retrieved successfully", "", results, nil)
+	response.SendResponse(w, http.StatusOK, "HTTP statuses retrieved successfully", "", results, false)
 }
 
 // UpdateURLHTTPStatusHandler handles updating an existing HTTP status
@@ -57,7 +57,7 @@ func UpdateURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 	var status URLHTTPStatus
 	err := json.NewDecoder(r.Body).Decode(&status)
 	if err != nil {
-		response.SendResponse(w, "Invalid request payload", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusBadRequest, "Invalid request payload", err.Error(), nil, false)
 		return
 	}
 
@@ -67,13 +67,13 @@ func UpdateURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 		"http_status": status.HTTPStatus,
 		"percentage":  status.Percentage,
 	}
-	err = crud.Update("url_http_status", status.ID, updates)
+	updatedStatus, err := crud.Update("url_http_status", status.ID, updates) // Fetch the updated object
 	if err != nil {
-		response.SendResponse(w, "Failed to update HTTP status", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusInternalServerError, "Failed to update HTTP status", err.Error(), nil, false)
 		return
 	}
 
-	response.SendResponse(w, "HTTP status updated successfully", "", status, nil)
+	response.SendResponse(w, http.StatusOK, "HTTP status updated successfully", "", updatedStatus, false)
 }
 
 // DeleteURLHTTPStatusHandler handles deleting an HTTP status
@@ -81,15 +81,15 @@ func DeleteURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		response.SendResponse(w, "Invalid ID parameter", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
 	}
 
 	err = crud.Delete("url_http_status", id)
 	if err != nil {
-		response.SendResponse(w, "Failed to delete HTTP status", err.Error(), nil, nil)
+		response.SendResponse(w, http.StatusInternalServerError, "Failed to delete HTTP status", err.Error(), nil, false)
 		return
 	}
 
-	response.SendResponse(w, "HTTP status deleted successfully", "", nil, nil)
+	response.SendResponse(w, http.StatusOK, "HTTP status deleted successfully", "", nil, false)
 }

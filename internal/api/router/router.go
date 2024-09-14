@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/adolfooes/api_faker/internal/api/handler"
+	"github.com/adolfooes/api_faker/internal/api/middleware"
 	"github.com/gorilla/mux"
 )
 
@@ -9,38 +10,45 @@ import (
 func InitializeRouter() *mux.Router {
 	router := mux.NewRouter()
 
-	// Account-related routes
-	router.HandleFunc("/account", handler.GetAllAccountsHandler).Methods("GET")
-	router.HandleFunc("/account/{id:[0-9]+}", handler.GetAccountHandler).Methods("GET")
+	// Public route (login)
+	router.HandleFunc("/login", handler.LoginHandler).Methods("POST")
 	router.HandleFunc("/account", handler.CreateAccountHandler).Methods("POST")
-	router.HandleFunc("/account/{id:[0-9]+}", handler.UpdateAccountHandler).Methods("PUT")
-	router.HandleFunc("/account/{id:[0-9]+}", handler.DeleteAccountHandler).Methods("DELETE")
 
-	// Project-related routes
-	router.HandleFunc("/project", handler.GetAllProjectsHandler).Methods("GET")
-	router.HandleFunc("/project/{id:[0-9]+}", handler.GetProjectHandler).Methods("GET")
-	router.HandleFunc("/project", handler.CreateProjectHandler).Methods("POST")
-	router.HandleFunc("/project/{id:[0-9]+}", handler.UpdateProjectHandler).Methods("PUT")
-	router.HandleFunc("/project/{id:[0-9]+}", handler.DeleteProjectHandler).Methods("DELETE")
+	// Protected routes
+	securedRoutes := router.PathPrefix("/api").Subrouter()
+	securedRoutes.Use(middleware.JWTMiddleware) // Apply JWT middleware
 
-	// URL Config-related routes
-	router.HandleFunc("/url_config", handler.GetAllURLConfigsHandler).Methods("GET")
-	router.HandleFunc("/url_config/{id:[0-9]+}", handler.GetURLConfigHandler).Methods("GET")
-	router.HandleFunc("/url_config", handler.CreateURLConfigHandler).Methods("POST")
-	router.HandleFunc("/url_config/{id:[0-9]+}", handler.UpdateURLConfigHandler).Methods("PUT")
-	router.HandleFunc("/url_config/{id:[0-9]+}", handler.DeleteURLConfigHandler).Methods("DELETE")
+	// Account-related routes under /api
+	securedRoutes.HandleFunc("/account", handler.GetAllAccountsHandler).Methods("GET")
+	securedRoutes.HandleFunc("/account/{id:[0-9]+}", handler.GetAccountHandler).Methods("GET")
+	securedRoutes.HandleFunc("/account/{id:[0-9]+}", handler.UpdateAccountHandler).Methods("PUT")
+	securedRoutes.HandleFunc("/account/{id:[0-9]+}", handler.DeleteAccountHandler).Methods("DELETE")
 
-	// URL HTTP Status-related routes
-	router.HandleFunc("/url_http_status", handler.GetAllURLHTTPStatusesHandler).Methods("GET")
-	router.HandleFunc("/url_http_status", handler.CreateURLHTTPStatusHandler).Methods("POST")
-	router.HandleFunc("/url_http_status/{id:[0-9]+}", handler.UpdateURLHTTPStatusHandler).Methods("PUT")
-	router.HandleFunc("/url_http_status/{id:[0-9]+}", handler.DeleteURLHTTPStatusHandler).Methods("DELETE")
+	// Project-related routes under /api
+	securedRoutes.HandleFunc("/project", handler.GetAllProjectsHandler).Methods("GET")
+	securedRoutes.HandleFunc("/project/{id:[0-9]+}", handler.GetProjectHandler).Methods("GET")
+	securedRoutes.HandleFunc("/project", handler.CreateProjectHandler).Methods("POST")
+	securedRoutes.HandleFunc("/project/{id:[0-9]+}", handler.UpdateProjectHandler).Methods("PUT")
+	securedRoutes.HandleFunc("/project/{id:[0-9]+}", handler.DeleteProjectHandler).Methods("DELETE")
 
-	// Response Model-related routes
-	router.HandleFunc("/response_model", handler.GetAllResponseModelsHandler).Methods("GET")
-	router.HandleFunc("/response_model", handler.CreateResponseModelHandler).Methods("POST")
-	router.HandleFunc("/response_model/{id:[0-9]+}", handler.UpdateResponseModelHandler).Methods("PUT")
-	router.HandleFunc("/response_model/{id:[0-9]+}", handler.DeleteResponseModelHandler).Methods("DELETE")
+	// URL Config-related routes under /api
+	securedRoutes.HandleFunc("/url_config", handler.GetAllURLConfigsHandler).Methods("GET")
+	securedRoutes.HandleFunc("/url_config/{id:[0-9]+}", handler.GetURLConfigHandler).Methods("GET")
+	securedRoutes.HandleFunc("/url_config", handler.CreateURLConfigHandler).Methods("POST")
+	securedRoutes.HandleFunc("/url_config/{id:[0-9]+}", handler.UpdateURLConfigHandler).Methods("PUT")
+	securedRoutes.HandleFunc("/url_config/{id:[0-9]+}", handler.DeleteURLConfigHandler).Methods("DELETE")
+
+	// URL HTTP Status-related routes under /api
+	securedRoutes.HandleFunc("/url_http_status", handler.GetAllURLHTTPStatusesHandler).Methods("GET")
+	securedRoutes.HandleFunc("/url_http_status", handler.CreateURLHTTPStatusHandler).Methods("POST")
+	securedRoutes.HandleFunc("/url_http_status/{id:[0-9]+}", handler.UpdateURLHTTPStatusHandler).Methods("PUT")
+	securedRoutes.HandleFunc("/url_http_status/{id:[0-9]+}", handler.DeleteURLHTTPStatusHandler).Methods("DELETE")
+
+	// Response Model-related routes under /api
+	securedRoutes.HandleFunc("/response_model", handler.GetAllResponseModelsHandler).Methods("GET")
+	securedRoutes.HandleFunc("/response_model", handler.CreateResponseModelHandler).Methods("POST")
+	securedRoutes.HandleFunc("/response_model/{id:[0-9]+}", handler.UpdateResponseModelHandler).Methods("PUT")
+	securedRoutes.HandleFunc("/response_model/{id:[0-9]+}", handler.DeleteResponseModelHandler).Methods("DELETE")
 
 	return router
 }

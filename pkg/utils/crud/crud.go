@@ -7,10 +7,10 @@ import (
 	"github.com/adolfooes/api_faker/internal/db"
 )
 
-// Create inserts a new record into the table
-func Create(table string, columns []string, values []interface{}) error {
+// Create inserts a new record into the table and returns the created record
+func Create(table string, columns []string, values []interface{}) (map[string]interface{}, error) {
 	if len(columns) != len(values) {
-		return fmt.Errorf("number of columns does not match the number of values")
+		return nil, fmt.Errorf("number of columns does not match the number of values")
 	}
 
 	columnsStr := strings.Join(columns, ", ")
@@ -20,50 +20,83 @@ func Create(table string, columns []string, values []interface{}) error {
 	}
 	placeholdersStr := strings.Join(placeholders, ", ")
 
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", table, columnsStr, placeholdersStr)
-	_, err := db.GetDB().Exec(query, values...)
+	// The RETURNING * will return all the columns of the newly inserted record
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING *", table, columnsStr, placeholdersStr)
+
+	// Execute the query and retrieve the rows
+	rows, err := db.GetDB().Query(query, values...)
 	if err != nil {
-		return fmt.Errorf("error creating record: %v", err)
+		return nil, fmt.Errorf("error executing query: %v", err)
 	}
-	return nil
+	defer rows.Close()
+
+	// Retrieve the column names dynamically from the table
+	columns, err = rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving columns: %v", err)
+	}
+
+	// Create slices to store the row's values dynamically
+	valuesPtrs := make([]interface{}, len(columns))
+	valuesArr := make([]interface{}, len(columns))
+	for i := range valuesPtrs {
+		valuesPtrs[i] = &valuesArr[i]
+	}
+
+	// Scan the row into the values array
+	if rows.Next() {
+		err := rows.Scan(valuesPtrs...)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %v", err)
+		}
+	}
+
+	// Create a map to store the result dynamically
+	result := make(map[string]interface{})
+	for i, col := range columns {
+		result[col] = valuesArr[i]
+	}
+
+	return result, nil
 }
 
 // Read retrieves a record from the table based on the ID
 func Read(table string, id int) (map[string]interface{}, error) {
+	// Construct the query to fetch a record by ID
 	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", table)
 
-	// Use Query instead of QueryRow to get *sql.Rows
+	// Execute the query and get the row
 	rows, err := db.GetDB().Query(query, id)
 	if err != nil {
 		return nil, fmt.Errorf("error executing query: %v", err)
 	}
 	defer rows.Close()
 
-	// Check if there are results
+	// Check if we got a row back
 	if !rows.Next() {
 		return nil, fmt.Errorf("no record found with id %d", id)
 	}
 
-	// Get column names dynamically
+	// Get the column names dynamically
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, fmt.Errorf("error getting columns: %v", err)
 	}
 
-	// Create slices to store values
+	// Create slices to store the row's values
 	values := make([]interface{}, len(columns))
 	valuePtrs := make([]interface{}, len(columns))
 	for i := range values {
 		valuePtrs[i] = &values[i]
 	}
 
-	// Scan the values into the slice of pointers
+	// Scan the row's values into the pointers
 	err = rows.Scan(valuePtrs...)
 	if err != nil {
 		return nil, fmt.Errorf("error scanning row: %v", err)
 	}
 
-	// Create the map to store the result
+	// Create a map to store the results
 	result := make(map[string]interface{})
 	for i, col := range columns {
 		result[col] = values[i]
@@ -82,9 +115,16 @@ func List(table string, filters map[string]interface{}) ([]map[string]interface{
 		args = append(args, value)
 		i++
 	}
-	whereClause := strings.Join(whereClauses, " AND ")
 
-	query := fmt.Sprintf("SELECT * FROM %s WHERE %s", table, whereClause)
+	var query string
+	if len(whereClauses) > 0 {
+		whereClause := strings.Join(whereClauses, " AND ")
+		query = fmt.Sprintf("SELECT * FROM %s WHERE %s", table, whereClause)
+	} else {
+		// If no filters, just select all records
+		query = fmt.Sprintf("SELECT * FROM %s", table)
+	}
+
 	rows, err := db.GetDB().Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error listing records: %v", err)
@@ -123,8 +163,8 @@ func List(table string, filters map[string]interface{}) ([]map[string]interface{
 	return results, nil
 }
 
-// Update updates a record based on a table and ID
-func Update(table string, id int, updates map[string]interface{}) error {
+// Update updates a record based on a table and ID, and returns the updated record dynamically
+func Update(table string, id int, updates map[string]interface{}) (map[string]interface{}, error) {
 	var setClauses []string
 	var args []interface{}
 	i := 1
@@ -133,15 +173,53 @@ func Update(table string, id int, updates map[string]interface{}) error {
 		args = append(args, value)
 		i++
 	}
+
 	setClause := strings.Join(setClauses, ", ")
 
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d", table, setClause, i)
+	// Append the ID at the end for the WHERE clause
 	args = append(args, id)
-	_, err := db.GetDB().Exec(query, args...)
+
+	// Build the query using RETURNING * to return the updated row
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d RETURNING *", table, setClause, i)
+
+	// Use Query to get sql.Rows for dynamically getting columns
+	rows, err := db.GetDB().Query(query, args...)
 	if err != nil {
-		return fmt.Errorf("error updating record: %v", err)
+		return nil, fmt.Errorf("error executing update query: %v", err)
 	}
-	return nil
+	defer rows.Close()
+
+	// Ensure we have a row to process
+	if !rows.Next() {
+		return nil, fmt.Errorf("no record found with id %d", id)
+	}
+
+	// Retrieve the column names dynamically
+	columns, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving columns: %v", err)
+	}
+
+	// Create a slice of interfaces to hold the values dynamically
+	values := make([]interface{}, len(columns))
+	valuePtrs := make([]interface{}, len(columns))
+	for i := range values {
+		valuePtrs[i] = &values[i]
+	}
+
+	// Scan the row's values into the value pointers
+	err = rows.Scan(valuePtrs...)
+	if err != nil {
+		return nil, fmt.Errorf("error scanning updated row: %v", err)
+	}
+
+	// Create a map to store the result and populate it with column names and their respective values
+	result := make(map[string]interface{})
+	for i, col := range columns {
+		result[col] = values[i]
+	}
+
+	return result, nil
 }
 
 // Delete removes a record based on a table and ID

@@ -2,7 +2,7 @@
 DOCKER_COMPOSE_LOCAL = docker-compose-local.yml
 
 # Target to start the services (build and run)
-up:
+up: 
 	@echo "Starting local services..."
 	docker-compose --env-file ./config/.env -f docker-compose-local.yml up --build
 
@@ -30,4 +30,4 @@ shell:
 	docker-compose -f $(DOCKER_COMPOSE_LOCAL) exec app sh
 
 # Default target if no target is provided
-.PHONY: up down restart logs migrate shell
+.PHONY: swagger up down restart logs migrate shell
