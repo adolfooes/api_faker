@@ -1,5 +1,5 @@
 # Step 1: Build the Go application in a builder container
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Install necessary tools for building and migrations
 RUN apk add --no-cache curl postgresql-client
@@ -36,7 +36,6 @@ COPY ./internal/db/migrations /migrations
 EXPOSE 8080
 
 # Download and extract migrate binary correctly
-# Download and extract migrate binary correctly
 RUN apk add --no-cache wget \
     && wget https://github.com/golang-migrate/migrate/releases/download/v4.15.2/migrate.linux-amd64.tar.gz \
     && tar -xzf migrate.linux-amd64.tar.gz \
@@ -52,9 +51,7 @@ CMD echo "Waiting for database to be ready..."; \
     echo "Creating database api_faker_dev if it doesn't exist..."; \
     PGPASSWORD=dev123 psql -h db -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'api_faker_dev'" | grep -q 1 || \
     PGPASSWORD=dev123 psql -h db -U postgres -c "CREATE DATABASE api_faker_dev;" || { echo "Database creation failed"; exit 1; }; \
-    echo "Database is ready! Forcing migration version..."; \
-    migrate -path /migrations -database postgres://postgres:dev123@db:5432/api_faker_dev?sslmode=disable force 1 || { echo "Forcing version failed"; exit 1; }; \
-    echo "Running migrations..."; \
+    echo "Database is ready! Running migrations..."; \
     migrate -path /migrations -database postgres://postgres:dev123@db:5432/api_faker_dev?sslmode=disable up || { echo "Migrations failed"; exit 1; }; \
     echo "Migrations completed. Starting the app..."; \
     ./api_faker

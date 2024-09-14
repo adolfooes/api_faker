@@ -8,27 +8,27 @@ services:
     depends_on:
       - db
     environment:
-      - FAKER_DATABASE_URL=postgres://postgres:dev123@db:5432/api_faker_dev?sslmode=disable
-    volumes:
-      - ./app:/app
+      FAKER_DATABASE_URL: ${FAKER_DATABASE_URL}
     networks:
       - api_faker_network
     env_file:
       - ./config/.env
+    volumes:
+      - ./app:/app
 
   db:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_DB: mydb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: dev123
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: api_faker_dev
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     networks:
       - api_faker_network
     volumes:
       - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
 networks:
   api_faker_network:

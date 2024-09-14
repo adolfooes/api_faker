@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -13,9 +11,11 @@ services:
       FAKER_DATABASE_URL: ${FAKER_DATABASE_URL}
     networks:
       - api_faker_network
+    env_file:
+      - ./config/.env
 
   db:
-    image: postgres:13-alpine
+    image: postgres:16-alpine
     restart: always
     environment:
       POSTGRES_DB: api_faker

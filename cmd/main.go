@@ -13,6 +13,9 @@ func main() {
 	// Initialize the database connection (if you're using a database)
 	db.InitDB(config.GetDatabaseConnectionString())
 
+	// Run the migrations (if you're using a database)
+	db.RunMigrations(config.GetDatabaseConnectionString())
+
 	// Initialize the router
 	router := router.InitializeRouter()
 

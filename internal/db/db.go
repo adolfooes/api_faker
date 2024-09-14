@@ -5,6 +5,10 @@ import (
 	"log"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
+
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var db *sql.DB
@@ -25,6 +29,28 @@ func InitDB(connStr string) {
 	}
 
 	log.Println("Database connection established successfully")
+}
+
+func RunMigrations(connStr string) {
+	log.Println("Starting migrations...")
+
+	// Initialize the migration
+	m, err := migrate.New(
+		"file:///migrations", // Path to your migration files
+		connStr,
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to initialize migration: %v", err)
+	}
+
+	// Apply all migrations
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Migration failed: %v", err)
+	}
+
+	log.Println("Migrations completed successfully.")
 }
 
 // GetDB returns the database instance
