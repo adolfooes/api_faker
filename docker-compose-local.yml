@@ -20,7 +20,7 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_DB: api_faker_dev
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     networks:
