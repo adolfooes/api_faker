@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -12,54 +14,112 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// MockHandler handles incoming requests for mocked URLs and returns the appropriate mocked response
+func validatePath(path string) error {
+	if path == "" {
+		return fmt.Errorf("path is required")
+	}
+
+	// Regular expression to validate the path
+	// This regex allows alphanumeric characters, slashes (/), dashes (-), and underscores (_)
+	regex := regexp.MustCompile(`^\/[a-zA-Z0-9\/\-_]*$`)
+
+	if !regex.MatchString(path) {
+		return fmt.Errorf("invalid path: path can only contain alphanumeric characters, slashes (/), dashes (-), and underscores (_)")
+	}
+
+	return nil
+}
+
+func validateOwnerID(ownerID string) (int64, error) {
+	if ownerID == "" {
+		return 0, fmt.Errorf("owner ID is required")
+	}
+
+	ownerIDInt, err := strconv.ParseInt(ownerID, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid Owner ID format")
+	}
+
+	return ownerIDInt, nil
+}
+
+func validateProjectID(projectIDStr string) (int, error) {
+	if projectIDStr == "" {
+		return 0, fmt.Errorf("missing project ID in URL")
+	}
+
+	projectID, err := strconv.Atoi(projectIDStr)
+	if err != nil {
+		return 0, fmt.Errorf("invalid project ID")
+	}
+
+	return projectID, nil
+}
+
+func checkProjectOwnership(project map[string]interface{}, ownerID int64) error {
+	if project["owner_id"].(int64) != ownerID {
+		return fmt.Errorf("unauthorized: owner ID mismatch")
+	}
+	return nil
+}
+
+func fetchProject(projectID int) (map[string]interface{}, error) {
+	filters := map[string]interface{}{
+		"id": projectID,
+	}
+	projectResults, err := crud.List("project", filters)
+	if err != nil || len(projectResults) == 0 {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	return projectResults[0], nil
+}
+
 func MockHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the requested path from the URL
 	vars := mux.Vars(r)
 	path := "/" + vars["path"]
 
-	// Extract the account ID (which will be used as owner_id) from the context (injected by the JWT middleware)
+	// Validate the path
+	if err := validatePath(path); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid path", err.Error(), nil, false)
+		return
+	}
+
+	// Extract the owner ID (which will be used as owner_id) from the context (injected by the JWT middleware)
 	ownerIDStr, ok := r.Context().Value(config.JWTAccountIDKey).(string)
 	if !ok {
 		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
 		return
 	}
 
-	// Convert the ownerID from string to int64
-	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	// Validate the owner ID
+	ownerID, err := validateOwnerID(ownerIDStr)
 	if err != nil {
-		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", "", nil, false)
+		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", err.Error(), nil, false)
 		return
 	}
 
-	// Extract the project_id from the URL parameters
+	// Extract the project ID from the URL parameters
 	projectIDStr := vars["project_id"]
-	if projectIDStr == "" {
-		response.SendResponse(w, http.StatusBadRequest, "Missing project ID in URL", "", nil, false)
-		return
-	}
 
-	// Convert the project ID to an integer
-	projectID, err := strconv.Atoi(projectIDStr)
+	// Validate project ID
+	projectID, err := validateProjectID(projectIDStr)
 	if err != nil {
-		response.SendResponse(w, http.StatusBadRequest, "Invalid project ID", "", nil, false)
+		response.SendResponse(w, http.StatusBadRequest, "Invalid project ID", err.Error(), nil, false)
 		return
 	}
 
 	// Fetch the project from the database
-	projectFilters := map[string]interface{}{
-		"id": projectID,
-	}
-	projectResults, err := crud.List("project", projectFilters)
-	if err != nil || len(projectResults) == 0 {
+	project, err := fetchProject(projectID)
+	if err != nil {
 		response.SendResponse(w, http.StatusNotFound, "Project not found", err.Error(), nil, false)
 		return
 	}
-	project := projectResults[0]
 
-	// Compare the owner_id from the project with the one from the JWT claims
-	if project["owner_id"].(int64) != ownerID {
-		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID mismatch", "", nil, false)
+	// Check ownership of the project
+	if err := checkProjectOwnership(project, ownerID); err != nil {
+		response.SendResponse(w, http.StatusUnauthorized, err.Error(), "", nil, false)
 		return
 	}
 

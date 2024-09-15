@@ -2,17 +2,18 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/mail"
+	"strings"
 	"time"
 
+	"github.com/adolfooes/api_faker/config"
 	"github.com/adolfooes/api_faker/pkg/utils/crud"
 	"github.com/adolfooes/api_faker/pkg/utils/response"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// Secret key used to sign the token (use a stronger key in production)
-var jwtSecretKey = []byte("your_secret_key")
 
 // Credentials represents the user's login credentials
 type Credentials struct {
@@ -27,6 +28,23 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+// Email validation function
+func validateEmailFormat(email string) error {
+	_, err := mail.ParseAddress(email)
+	if err != nil {
+		return fmt.Errorf("invalid email format")
+	}
+	return nil
+}
+
+// Password validation function (non-empty check)
+func validatePasswordNotEmpty(password string) error {
+	if len(password) == 0 {
+		return fmt.Errorf("password cannot be empty")
+	}
+	return nil
+}
+
 // LoginHandler handles user login and generates JWT token
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
@@ -36,8 +54,20 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Search for the account using the email (using Read or a customized query)
-	filter := map[string]interface{}{"email": creds.Email}
+	// Validate email format
+	if err := validateEmailFormat(creds.Email); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid email format", err.Error(), nil, false)
+		return
+	}
+
+	// Validate password is not empty
+	if err := validatePasswordNotEmpty(creds.Password); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid credentials", err.Error(), nil, false)
+		return
+	}
+
+	// Search for the account using the email (case-insensitive)
+	filter := map[string]interface{}{"email": strings.ToLower(creds.Email)}
 	results, err := crud.List("account", filter) // Alternatively, modify Read to accept filters
 	if err != nil {
 		response.SendResponse(w, http.StatusInternalServerError, "Error searching for account", err.Error(), nil, false)
@@ -79,7 +109,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Generate the token with claims and sign it with the secret key
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtSecretKey)
+	tokenString, err := token.SignedString(config.GetJWTSecretKey())
 	if err != nil {
 		response.SendResponse(w, http.StatusInternalServerError, "Failed to generate token", err.Error(), nil, false)
 		return

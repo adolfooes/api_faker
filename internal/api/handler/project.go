@@ -2,8 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/adolfooes/api_faker/config"
 	"github.com/adolfooes/api_faker/pkg/utils/crud"
@@ -19,6 +22,44 @@ type Project struct {
 	OwnerID     int64  `json:"owner_id"` // Changed AccountID to OwnerID
 }
 
+func validateRequiredProjectFields(project Project) error {
+	if project.Name == "" {
+		return fmt.Errorf("project name is required")
+	}
+	if len(project.Name) < 2 {
+		return fmt.Errorf("project name must be at least 2 characters long")
+	}
+	return nil
+}
+
+func validateProjectOwnership(projectID int, ownerID int64) (bool, error) {
+	filters := map[string]interface{}{
+		"id":       projectID,
+		"owner_id": ownerID,
+	}
+	projects, err := crud.List("project", filters)
+	if err != nil {
+		return false, err
+	}
+	if len(projects) == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func validateDescription(description string) error {
+	maxLength := 1000
+	if len(description) > maxLength {
+		return fmt.Errorf("description cannot be longer than %d characters", maxLength)
+	}
+	return nil
+}
+
+func sanitizeProjectInput(project *Project) {
+	project.Name = strings.TrimSpace(project.Name)
+	project.Description = strings.TrimSpace(project.Description)
+}
+
 // CreateProjectHandler handles the creation of a new project
 func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	var project Project
@@ -27,6 +68,20 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid request payload", err.Error(), nil, false)
+		return
+	}
+
+	sanitizeProjectInput(&project)
+
+	// Validate required fields
+	if err := validateRequiredProjectFields(project); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Required fields validation failed", err.Error(), nil, false)
+		return
+	}
+
+	// Validate required fields
+	if err := validateDescription(project.Description); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Description validation failed", err.Error(), nil, false)
 		return
 	}
 
@@ -46,6 +101,17 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Add the owner ID to the project (for consistency in future use)
 	project.OwnerID = ownerID
+
+	// Validate that the project exists and belongs to the current owner
+	isOwner, err := validateProjectOwnership(project.ID, ownerID)
+	if err != nil {
+		response.SendResponse(w, http.StatusInternalServerError, "Failed to validate project ownership", err.Error(), nil, false)
+		return
+	}
+	if !isOwner {
+		response.SendResponse(w, http.StatusUnauthorized, "You are not authorized to update this project", "", nil, false)
+		return
+	}
 
 	// Insert the new project into the database, including the owner ID
 	columns := []string{"name", "description", "owner_id"} // Updated to use owner_id
@@ -100,12 +166,46 @@ func GetProjectHandler(w http.ResponseWriter, r *http.Request) {
 	response.SendResponse(w, http.StatusOK, "Project retrieved successfully", "", result, false)
 }
 
-// UpdateProjectHandler handles updating an existing project
 func UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	var project Project
 	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid request payload", err.Error(), nil, false)
+		return
+	}
+
+	// Validate project ID from URL
+	idStr := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid project ID", err.Error(), nil, false)
+		return
+	}
+
+	// Query the project by ID
+	_, err = crud.Read("project", id)
+	if err != nil {
+		response.SendResponse(w, http.StatusNotFound, "Project not found", err.Error(), nil, false)
+		return
+	}
+
+	// Extract the owner ID from the context (injected by the JWT middleware)
+	ownerIDStr, ok := r.Context().Value(config.JWTAccountIDKey).(string)
+	if !ok {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
+		return
+	}
+
+	// Convert the ownerID from string to int64
+	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	if err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", "", nil, false)
+		return
+	}
+
+	// Validate that the project belongs to the owner
+	if err := authorizeProjectOwnership(project.ID, ownerID); err != nil {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: "+err.Error(), "", nil, false)
 		return
 	}
 
@@ -124,7 +224,6 @@ func UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	response.SendResponse(w, http.StatusOK, "Project updated successfully", "", updatedProject, false)
 }
 
-// DeleteProjectHandler handles deleting a project
 func DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, err := strconv.Atoi(idStr)
@@ -133,6 +232,34 @@ func DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Query the project by ID
+	_, err = crud.Read("project", id)
+	if err != nil {
+		response.SendResponse(w, http.StatusNotFound, "Project not found", err.Error(), nil, false)
+		return
+	}
+
+	// Extract the owner ID from the context (injected by the JWT middleware)
+	ownerIDStr, ok := r.Context().Value(config.JWTAccountIDKey).(string)
+	if !ok {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
+		return
+	}
+
+	// Convert the ownerID from string to int64
+	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	if err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", "", nil, false)
+		return
+	}
+
+	// Validate that the project belongs to the owner
+	if err := authorizeProjectOwnership(id, ownerID); err != nil {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: "+err.Error(), "", nil, false)
+		return
+	}
+
+	// Perform the deletion
 	err = crud.Delete("project", id)
 	if err != nil {
 		response.SendResponse(w, http.StatusInternalServerError, "Failed to delete project", err.Error(), nil, false)
@@ -140,4 +267,23 @@ func DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.SendResponse(w, http.StatusOK, "Project deleted successfully", "", nil, false)
+}
+
+// authorizeProjectOwnership validates if the current user owns the project.
+func authorizeProjectOwnership(projectID int, ownerID int64) error {
+	filters := map[string]interface{}{
+		"id":       projectID,
+		"owner_id": ownerID,
+	}
+
+	projects, err := crud.List("project", filters)
+	if err != nil {
+		return err
+	}
+
+	if len(projects) == 0 {
+		return errors.New("you are not authorized to perform this operation on the project")
+	}
+
+	return nil
 }

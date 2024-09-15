@@ -2,8 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/mail"
+	"regexp"
 	"strconv"
+	"unicode"
 
 	"github.com/adolfooes/api_faker/pkg/utils/crud"
 	"github.com/adolfooes/api_faker/pkg/utils/response"
@@ -28,6 +32,67 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPassword), nil
 }
 
+func validateEmail(email string) error {
+	_, err := mail.ParseAddress(email)
+	if err != nil {
+		return fmt.Errorf("invalid email format")
+	}
+	return nil
+}
+
+func validatePassword(password string) error {
+	var hasMinLen, hasUpper, hasLower, hasNumber, hasSpecial bool
+	minLen := 8 // Set minimum password length
+
+	if len(password) >= minLen {
+		hasMinLen = true
+	}
+	for _, char := range password {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsDigit(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+
+	if !hasMinLen || !hasUpper || !hasLower || !hasNumber || !hasSpecial {
+		return fmt.Errorf("password must be at least %d characters long, contain an upper-case letter, a lower-case letter, a number, and a special character", minLen)
+	}
+	return nil
+}
+
+func validateRequiredFields(account Account) error {
+	if account.Email == "" {
+		return fmt.Errorf("email is required")
+	}
+	if account.Password == "" {
+		return fmt.Errorf("password is required")
+	}
+	return nil
+}
+
+func sanitizeInput(input string) string {
+	re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
+	return re.ReplaceAllString(input, "")
+}
+
+func checkDuplicateEmail(email string) (bool, error) {
+	filters := map[string]interface{}{"email": email}
+	accounts, err := crud.List("account", filters)
+	if err != nil {
+		return false, err
+	}
+	if len(accounts) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 // CreateAccountHandler handles the creation of a new account
 func CreateAccountHandler(w http.ResponseWriter, r *http.Request) {
 	var account Account
@@ -36,6 +101,33 @@ func CreateAccountHandler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&account)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid request payload", err.Error(), nil, false)
+		return
+	}
+
+	if err := validateRequiredFields(account); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Missing required fields", err.Error(), nil, false)
+		return
+	}
+
+	account.Email = sanitizeInput(account.Email)
+
+	if err := validateEmail(account.Email); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid email", err.Error(), nil, false)
+		return
+	}
+
+	if err := validatePassword(account.Password); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Weak password", err.Error(), nil, false)
+		return
+	}
+
+	exists, err := checkDuplicateEmail(account.Email)
+	if err != nil {
+		response.SendResponse(w, http.StatusInternalServerError, "Error checking duplicate email", err.Error(), nil, false)
+		return
+	}
+	if exists {
+		response.SendResponse(w, http.StatusConflict, "Account with this email already exists", "", nil, false)
 		return
 	}
 

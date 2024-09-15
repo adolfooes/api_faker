@@ -2,9 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/adolfooes/api_faker/config"
 	"github.com/adolfooes/api_faker/pkg/utils/crud"
 	"github.com/adolfooes/api_faker/pkg/utils/response"
 	"github.com/gorilla/mux"
@@ -18,7 +20,50 @@ type ResponseModel struct {
 	Description     string      `json:"description"`
 }
 
-// CreateResponseModelHandler handles creating a new response model for an HTTP status
+func validateRequiredResponseModelFields(model ResponseModel) error {
+	if model.URLHTTPStatusID == 0 {
+		return fmt.Errorf("url_http_status_id is required")
+	}
+	if model.Model == nil {
+		return fmt.Errorf("model is required")
+	}
+	return nil
+}
+
+func validateURLHTTPStatusExists(urlHTTPStatusID int) error {
+	filters := map[string]interface{}{"id": urlHTTPStatusID}
+	statuses, err := crud.List("url_http_status", filters)
+	if err != nil || len(statuses) == 0 {
+		return fmt.Errorf("url_http_status_id does not exist")
+	}
+	return nil
+}
+
+func authorizeOwnershipByURLHTTPStatusID(urlHTTPStatusID int, ownerID int64) error {
+	// First, fetch the url_id associated with the provided url_http_status_id
+	filters := map[string]interface{}{"id": urlHTTPStatusID}
+	urlHTTPStatuses, err := crud.List("url_http_status", filters)
+	if err != nil || len(urlHTTPStatuses) == 0 {
+		return fmt.Errorf("url_http_status_id not found")
+	}
+	urlHTTPStatus := urlHTTPStatuses[0]
+
+	// Now, fetch the corresponding url_config using the url_id to check ownership
+	urlID := urlHTTPStatus["url_id"].(int)
+	filters = map[string]interface{}{"id": urlID}
+	urlConfigs, err := crud.List("url_config", filters)
+	if err != nil || len(urlConfigs) == 0 {
+		return fmt.Errorf("url_config not found for the provided url_http_status_id")
+	}
+
+	// Check ownership of the url_config
+	if urlConfigs[0]["owner_id"].(int64) != ownerID {
+		return fmt.Errorf("you are not authorized to modify this response model")
+	}
+
+	return nil
+}
+
 func CreateResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 	var model ResponseModel
 
@@ -29,7 +74,37 @@ func CreateResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Insert the new response model into the database using the crud package
+	// Validate required fields
+	if err := validateRequiredResponseModelFields(model); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Validation failed", err.Error(), nil, false)
+		return
+	}
+
+	// Validate the existence of url_http_status_id
+	if err := validateURLHTTPStatusExists(model.URLHTTPStatusID); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid url_http_status_id", err.Error(), nil, false)
+		return
+	}
+
+	// Extract the owner ID from the context (injected by the JWT middleware)
+	ownerIDStr, ok := r.Context().Value(config.JWTAccountIDKey).(string)
+	if !ok {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
+		return
+	}
+	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	if err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", "", nil, false)
+		return
+	}
+
+	// Authorize ownership by checking the owner of the url_http_status_id
+	if err := authorizeOwnershipByURLHTTPStatusID(model.URLHTTPStatusID, ownerID); err != nil {
+		response.SendResponse(w, http.StatusUnauthorized, err.Error(), "", nil, false)
+		return
+	}
+
+	// Insert the new response model into the database
 	columns := []string{"url_http_status_id", "model", "description"}
 	values := []interface{}{model.URLHTTPStatusID, model.Model, model.Description}
 	createdModel, err := crud.Create("response_model", columns, values) // Fetch the created response model object
@@ -81,7 +156,6 @@ func GetResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 	response.SendResponse(w, http.StatusOK, "Response model retrieved successfully", "", result, false)
 }
 
-// UpdateResponseModelHandler handles updating an existing response model
 func UpdateResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 	var model ResponseModel
 	err := json.NewDecoder(r.Body).Decode(&model)
@@ -90,7 +164,37 @@ func UpdateResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update the response model in the database using the crud package
+	// Validate required fields
+	if err := validateRequiredResponseModelFields(model); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Validation failed", err.Error(), nil, false)
+		return
+	}
+
+	// Validate the existence of url_http_status_id
+	if err := validateURLHTTPStatusExists(model.URLHTTPStatusID); err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid url_http_status_id", err.Error(), nil, false)
+		return
+	}
+
+	// Extract the owner ID from the context (injected by the JWT middleware)
+	ownerIDStr, ok := r.Context().Value(config.JWTAccountIDKey).(string)
+	if !ok {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
+		return
+	}
+	ownerID, err := strconv.ParseInt(ownerIDStr, 10, 64)
+	if err != nil {
+		response.SendResponse(w, http.StatusBadRequest, "Invalid Owner ID format", "", nil, false)
+		return
+	}
+
+	// Authorize ownership by checking the owner of the url_http_status_id
+	if err := authorizeOwnershipByURLHTTPStatusID(model.URLHTTPStatusID, ownerID); err != nil {
+		response.SendResponse(w, http.StatusUnauthorized, err.Error(), "", nil, false)
+		return
+	}
+
+	// Update the response model in the database
 	updates := map[string]interface{}{
 		"url_http_status_id": model.URLHTTPStatusID,
 		"model":              model.Model,
