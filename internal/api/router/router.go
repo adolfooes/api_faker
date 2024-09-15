@@ -19,7 +19,6 @@ func InitializeRouter() *mux.Router {
 	securedRoutes.Use(middleware.JWTMiddleware) // Apply JWT middleware
 
 	// Account-related routes under /api
-	securedRoutes.HandleFunc("/account", handler.GetAllAccountsHandler).Methods("GET")
 	securedRoutes.HandleFunc("/account/{id:[0-9]+}", handler.GetAccountHandler).Methods("GET")
 	securedRoutes.HandleFunc("/account/{id:[0-9]+}", handler.UpdateAccountHandler).Methods("PUT")
 	securedRoutes.HandleFunc("/account/{id:[0-9]+}", handler.DeleteAccountHandler).Methods("DELETE")
