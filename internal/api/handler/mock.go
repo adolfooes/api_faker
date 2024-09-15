@@ -32,10 +32,10 @@ func MockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get the project_id from the headers
-	projectIDStr := r.Header.Get("Project-ID")
+	// Extract the project_id from the URL parameters
+	projectIDStr := vars["project_id"]
 	if projectIDStr == "" {
-		response.SendResponse(w, http.StatusBadRequest, "Missing project ID in headers", "", nil, false)
+		response.SendResponse(w, http.StatusBadRequest, "Missing project ID in URL", "", nil, false)
 		return
 	}
 
@@ -68,7 +68,7 @@ func MockHandler(w http.ResponseWriter, r *http.Request) {
 	filters := map[string]interface{}{
 		"path":       path,
 		"method":     method,
-		"project_id": projectID, // Filter by the project ID from headers
+		"project_id": projectID, // Filter by the project ID from URL
 	}
 	urlConfigs, err := crud.List("url_config", filters)
 	if err != nil || len(urlConfigs) == 0 {
