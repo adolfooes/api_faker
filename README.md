@@ -159,11 +159,6 @@ For example, to retrieve all accounts:
 curl -X GET http://localhost:8080/accounts
 \`\`\`
 
-## Future Improvements
-
-- Add authentication (JWT, OAuth)
-- Add more comprehensive unit tests
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
