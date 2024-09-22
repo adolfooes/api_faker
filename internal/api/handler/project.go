@@ -16,7 +16,7 @@ import (
 
 // Project represents the project structure
 type Project struct {
-	ID          int    `json:"id"`
+	ID          int64  `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	OwnerID     int64  `json:"owner_id"` // Changed AccountID to OwnerID
@@ -102,17 +102,6 @@ func CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	// Add the owner ID to the project (for consistency in future use)
 	project.OwnerID = ownerID
 
-	// Validate that the project exists and belongs to the current owner
-	isOwner, err := validateProjectOwnership(project.ID, ownerID)
-	if err != nil {
-		response.SendResponse(w, http.StatusInternalServerError, "Failed to validate project ownership", err.Error(), nil, false)
-		return
-	}
-	if !isOwner {
-		response.SendResponse(w, http.StatusUnauthorized, "You are not authorized to update this project", "", nil, false)
-		return
-	}
-
 	// Insert the new project into the database, including the owner ID
 	columns := []string{"name", "description", "owner_id"} // Updated to use owner_id
 	values := []interface{}{project.Name, project.Description, ownerID}
@@ -149,7 +138,7 @@ func GetProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert the ID string to an integer
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
@@ -176,7 +165,7 @@ func UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate project ID from URL
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil || id <= 0 {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid project ID", err.Error(), nil, false)
 		return
@@ -226,7 +215,7 @@ func UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
 
 func DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
@@ -270,7 +259,7 @@ func DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // authorizeProjectOwnership validates if the current user owns the project.
-func authorizeProjectOwnership(projectID int, ownerID int64) error {
+func authorizeProjectOwnership(projectID int64, ownerID int64) error {
 	filters := map[string]interface{}{
 		"id":       projectID,
 		"owner_id": ownerID,

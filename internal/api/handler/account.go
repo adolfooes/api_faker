@@ -3,9 +3,10 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
-	"net/mail"
 	"regexp"
+	"runtime"
 	"strconv"
 	"unicode"
 
@@ -17,7 +18,7 @@ import (
 
 // Account represents the account structure
 type Account struct {
-	ID       int    `json:"id"`
+	ID       int64  `json:"id"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
@@ -33,10 +34,16 @@ func hashPassword(password string) (string, error) {
 }
 
 func validateEmail(email string) error {
-	_, err := mail.ParseAddress(email)
-	if err != nil {
+	emailRegex := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
+	re := regexp.MustCompile(emailRegex)
+
+	_, file, line, _ := runtime.Caller(0)
+	log.Printf("[File: %s | Line: %d] | @LBU5 : %v\n", file, line, emailRegex)
+
+	if !re.MatchString(email) {
 		return fmt.Errorf("invalid email format")
 	}
+
 	return nil
 }
 
@@ -76,11 +83,6 @@ func validateRequiredFields(account Account) error {
 	return nil
 }
 
-func sanitizeInput(input string) string {
-	re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
-	return re.ReplaceAllString(input, "")
-}
-
 func checkDuplicateEmail(email string) (bool, error) {
 	filters := map[string]interface{}{"email": email}
 	accounts, err := crud.List("account", filters)
@@ -109,7 +111,8 @@ func CreateAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account.Email = sanitizeInput(account.Email)
+	_, file, line, _ := runtime.Caller(0)
+	log.Printf("[File: %s | Line: %d] | @LBU5 : %v\n", file, line, account)
 
 	if err := validateEmail(account.Email); err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid email", err.Error(), nil, false)
@@ -185,7 +188,7 @@ func GetAccountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert the id from string to int
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
@@ -248,7 +251,7 @@ func UpdateAccountHandler(w http.ResponseWriter, r *http.Request) {
 // DeleteAccountHandler handles deleting an account
 func DeleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return

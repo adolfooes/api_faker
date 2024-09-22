@@ -13,10 +13,10 @@ import (
 
 // URLHTTPStatus represents a structure for an HTTP status associated with a URL
 type URLHTTPStatus struct {
-	ID         int `json:"id"`
-	URLID      int `json:"url_id"`
-	HTTPStatus int `json:"http_status"`
-	Percentage int `json:"percentage"`
+	ID         int64 `json:"id"`
+	URLID      int64 `json:"url_id"`
+	HTTPStatus int   `json:"http_status"`
+	Percentage int   `json:"percentage"`
 }
 
 func validateRequiredURLHTTPStatusFields(status URLHTTPStatus) error {
@@ -39,7 +39,7 @@ func validateHTTPStatusCode(httpStatus int) error {
 	return nil
 }
 
-func validatePercentageDistribution(urlID int, newPercentage int) error {
+func validatePercentageDistribution(urlID int64, newPercentage int) error {
 	filters := map[string]interface{}{
 		"url_id": urlID,
 	}
@@ -60,19 +60,32 @@ func validatePercentageDistribution(urlID int, newPercentage int) error {
 	return nil
 }
 
-func authorizeURLOwnership(urlID int, ownerID int64) error {
-	filters := map[string]interface{}{
-		"id": urlID,
-	}
-	urlConfigs, err := crud.List("url_config", filters)
-	if err != nil || len(urlConfigs) == 0 {
+func authorizeURLOwnership(urlID int64, ownerID int64) error {
+	// Step 1: Read the URL config to get the project_id from url_config
+	urlConfig, err := crud.Read("url_config", urlID)
+	if err != nil {
 		return fmt.Errorf("URL not found")
 	}
-	urlConfig := urlConfigs[0]
 
-	if int64(urlConfig["owner_id"].(int)) != ownerID {
+	projectID, ok := urlConfig["project_id"].(int64)
+	if !ok {
+		return fmt.Errorf("project_id not found in URL config")
+	}
+
+	project, err := crud.Read("project", projectID)
+	if err != nil {
+		return fmt.Errorf("Project not found")
+	}
+
+	projectOwnerID, ok := project["owner_id"].(int64)
+	if !ok {
+		return fmt.Errorf("owner_id not found in project")
+	}
+
+	if projectOwnerID != ownerID {
 		return fmt.Errorf("you are not authorized to modify this URL")
 	}
+
 	return nil
 }
 
@@ -110,19 +123,16 @@ func CreateURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authorize ownership of the URL
 	if err := authorizeURLOwnership(status.URLID, ownerID); err != nil {
 		response.SendResponse(w, http.StatusUnauthorized, err.Error(), "", nil, false)
 		return
 	}
 
-	// Validate percentage distribution
 	if err := validatePercentageDistribution(status.URLID, status.Percentage); err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Percentage validation failed", err.Error(), nil, false)
 		return
 	}
 
-	// Insert the new URL HTTP status into the database
 	columns := []string{"url_id", "http_status", "percentage"}
 	values := []interface{}{status.URLID, status.HTTPStatus, status.Percentage}
 	createdStatus, err := crud.Create("url_http_status", columns, values) // Fetch the created object
@@ -208,7 +218,7 @@ func UpdateURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 // DeleteURLHTTPStatusHandler handles deleting an HTTP status
 func DeleteURLHTTPStatusHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return

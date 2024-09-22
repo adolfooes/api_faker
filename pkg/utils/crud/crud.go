@@ -36,8 +36,6 @@ func Create(table string, columns []string, values []interface{}) (map[string]in
 		return nil, fmt.Errorf("error retrieving columns: %v", err)
 	}
 
-	// Create slices to store the row's values dynamically
-	// TODO: | @LBU5 : translate ENUM values to string
 	valuesPtrs := make([]interface{}, len(columns))
 	valuesArr := make([]interface{}, len(columns))
 	for i := range valuesPtrs {
@@ -55,14 +53,14 @@ func Create(table string, columns []string, values []interface{}) (map[string]in
 	// Create a map to store the result dynamically
 	result := make(map[string]interface{})
 	for i, col := range columns {
-		result[col] = valuesArr[i]
+		result[col] = db.TranslateEnumValue(table, col, valuesArr[i])
 	}
 
 	return result, nil
 }
 
 // Read retrieves a record from the table based on the ID
-func Read(table string, id int) (map[string]interface{}, error) {
+func Read(table string, id int64) (map[string]interface{}, error) {
 	// Construct the query to fetch a record by ID
 	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", table)
 
@@ -100,7 +98,7 @@ func Read(table string, id int) (map[string]interface{}, error) {
 	// Create a map to store the results
 	result := make(map[string]interface{})
 	for i, col := range columns {
-		result[col] = values[i]
+		result[col] = db.TranslateEnumValue(table, col, values[i])
 	}
 
 	return result, nil
@@ -152,7 +150,7 @@ func List(table string, filters map[string]interface{}) ([]map[string]interface{
 
 		result := make(map[string]interface{})
 		for i, col := range columns {
-			result[col] = values[i]
+			result[col] = db.TranslateEnumValue(table, col, values[i])
 		}
 		results = append(results, result)
 	}
@@ -165,7 +163,7 @@ func List(table string, filters map[string]interface{}) ([]map[string]interface{
 }
 
 // Update updates a record based on a table and ID, and returns the updated record dynamically
-func Update(table string, id int, updates map[string]interface{}) (map[string]interface{}, error) {
+func Update(table string, id int64, updates map[string]interface{}) (map[string]interface{}, error) {
 	var setClauses []string
 	var args []interface{}
 	i := 1
@@ -217,14 +215,14 @@ func Update(table string, id int, updates map[string]interface{}) (map[string]in
 	// Create a map to store the result and populate it with column names and their respective values
 	result := make(map[string]interface{})
 	for i, col := range columns {
-		result[col] = values[i]
+		result[col] = db.TranslateEnumValue(table, col, values[i])
 	}
 
 	return result, nil
 }
 
 // Delete removes a record based on a table and ID
-func Delete(table string, id int) error {
+func Delete(table string, id int64) error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE id = $1", table)
 	_, err := db.GetDB().Exec(query, id)
 	if err != nil {

@@ -15,11 +15,11 @@ import (
 
 // URLConfig represents a URL configuration structure
 type URLConfig struct {
-	ID          int    `json:"id"`
+	ID          int64  `json:"id"`
 	Path        string `json:"path"`
 	Method      string `json:"method"`
 	Description string `json:"description"`
-	ProjectID   int    `json:"project_id"` // Add ProjectID to the struct
+	ProjectID   int64  `json:"project_id"` // Add ProjectID to the struct
 }
 
 func validateRequiredURLConfigFields(urlConfig URLConfig) error {
@@ -53,7 +53,7 @@ func validateHTTPMethod(method string) error {
 	return fmt.Errorf("invalid HTTP method: %s", method)
 }
 
-func checkDuplicateURLConfig(projectID int, path string, method string) (bool, error) {
+func checkDuplicateURLConfig(projectID int64, path string, method string) (bool, error) {
 	filters := map[string]interface{}{
 		"project_id": projectID,
 		"path":       path,
@@ -164,7 +164,7 @@ func GetURLConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert the ID to an integer
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
@@ -246,7 +246,7 @@ func UpdateURLConfigHandler(w http.ResponseWriter, r *http.Request) {
 // DeleteURLConfigHandler handles deleting a URL config
 func DeleteURLConfigHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return

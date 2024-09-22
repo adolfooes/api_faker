@@ -14,7 +14,7 @@ import (
 
 // ResponseModel represents a structure for a response model
 type ResponseModel struct {
-	ID              int         `json:"id"`
+	ID              int64       `json:"id"`
 	URLHTTPStatusID int         `json:"url_http_status_id"`
 	Model           interface{} `json:"model"` // Assuming model is JSONB in the database
 	Description     string      `json:"description"`
@@ -139,7 +139,7 @@ func GetResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert the ID string to an integer
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
@@ -212,7 +212,7 @@ func UpdateResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 // DeleteResponseModelHandler handles deleting a response model
 func DeleteResponseModelHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid ID parameter", err.Error(), nil, false)
 		return
