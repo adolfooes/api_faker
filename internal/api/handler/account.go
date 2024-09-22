@@ -3,10 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
-	"runtime"
 	"strconv"
 	"unicode"
 
@@ -36,9 +34,6 @@ func hashPassword(password string) (string, error) {
 func validateEmail(email string) error {
 	emailRegex := `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
 	re := regexp.MustCompile(emailRegex)
-
-	_, file, line, _ := runtime.Caller(0)
-	log.Printf("[File: %s | Line: %d] | @LBU5 : %v\n", file, line, emailRegex)
 
 	if !re.MatchString(email) {
 		return fmt.Errorf("invalid email format")
@@ -110,9 +105,6 @@ func CreateAccountHandler(w http.ResponseWriter, r *http.Request) {
 		response.SendResponse(w, http.StatusBadRequest, "Missing required fields", err.Error(), nil, false)
 		return
 	}
-
-	_, file, line, _ := runtime.Caller(0)
-	log.Printf("[File: %s | Line: %d] | @LBU5 : %v\n", file, line, account)
 
 	if err := validateEmail(account.Email); err != nil {
 		response.SendResponse(w, http.StatusBadRequest, "Invalid email", err.Error(), nil, false)
