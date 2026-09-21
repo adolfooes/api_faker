@@ -10,16 +10,16 @@ import (
 )
 
 func main() {
-	// Initialize the database connection (if you're using a database)
 	db.InitDB(config.GetDatabaseConnectionString())
-
-	// Run the migrations (if you're using a database)
 	db.RunMigrations(config.GetDatabaseConnectionString())
 
-	// Initialize the router
+	jwtKey := config.GetJWTSecretKey()
+	if len(jwtKey) == 0 || string(jwtKey) == "your_secret_key" {
+		log.Println("WARNING: JWT_SECRET_KEY is not set or uses the insecure default value. Set a secure JWT_SECRET_KEY environment variable.")
+	}
+
 	router := router.InitializeRouter()
 
-	// Start the HTTP server
 	log.Println("Server is running on port 8080")
 	err := http.ListenAndServe(":8080", router)
 	if err != nil {
