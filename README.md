@@ -29,15 +29,21 @@ cd api_faker
 
 ### 2. Configure Environment Variables
 
-Copy or edit `config/.env`:
+O `config/.env` nao vai para o git. Parta do exemplo:
 
-```env
-FAKER_DATABASE_URL=postgres://postgres:password@db:5432/api_faker_dev?sslmode=disable
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=password
-POSTGRES_DB=api_faker_dev
-JWT_SECRET_KEY=change_me_to_a_secure_random_value
+```bash
+cp config/.env.example config/.env
 ```
+
+Depois preencha `JWT_SECRET_KEY` (o servico avisa no boot se ficar vazio
+ou com o default inseguro) e `SEED_PASSWORD`, usada pelo `make seed-kyc`:
+
+```bash
+openssl rand -hex 32
+```
+
+Os valores de Postgres ja vem preenchidos no exemplo: o banco sobe junto
+pelo compose local e e efemero.
 
 > **Warning:** If `JWT_SECRET_KEY` is empty or set to `your_secret_key`, the server will print a warning on startup.
 
