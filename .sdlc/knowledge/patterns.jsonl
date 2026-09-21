@@ -1,0 +1,1 @@
+{"id":"97e2758a","kind":"failure","text":"Falha ao preparar dependências na worktree: \"go mod download\" falhou (exit null): Error: spawn go ENOENT. Problema de ambiente — corrija e retome com: sdlc resume <path>","source":{"runId":"e2e319ec-e479-4352-aae6-41a52d55daa9","phase":"done"},"tags":["blocker"],"confidence":0.5,"uses":0,"created_at":"2026-09-21T16:51:19.813Z"}

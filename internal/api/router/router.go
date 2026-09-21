@@ -49,8 +49,12 @@ func InitializeRouter() *mux.Router {
 	securedRoutes.HandleFunc("/response_model/{id:[0-9]+}", handler.UpdateResponseModelHandler).Methods("PUT")
 	securedRoutes.HandleFunc("/response_model/{id:[0-9]+}", handler.DeleteResponseModelHandler).Methods("DELETE")
 
-	// Mock response route under /api
-	securedRoutes.HandleFunc("/mock/{project_id}/{path:.*}", handler.MockHandler).Methods("GET", "POST", "PUT", "DELETE", "PATCH")
+	// Scenario routes under /api
+	securedRoutes.HandleFunc("/scenario", handler.CreateScenarioHandler).Methods("POST")
+	securedRoutes.HandleFunc("/scenario/{project_id:[0-9]+}", handler.GetScenarioHandler).Methods("GET")
+
+	// Mock route is public — no JWT required
+	router.HandleFunc("/api/mock/{project_id}/{path:.*}", handler.MockHandler).Methods("GET", "POST", "PUT", "DELETE", "PATCH")
 
 	return router
 }

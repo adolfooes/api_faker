@@ -1,0 +1,56 @@
+{
+  "run_id": "2b4798b8-ae33-4f27-bc0c-0d697421dadb",
+  "mode": "new",
+  "started_at": "2026-09-21T08:56:52.142Z",
+  "updated_at": "2026-09-21T08:56:52.143Z",
+  "current_phase": "discovery",
+  "phases": {
+    "discovery": {
+      "status": "pending",
+      "agent": "pm"
+    },
+    "setup": {
+      "status": "pending",
+      "agent": "devops"
+    },
+    "backend": {
+      "status": "pending",
+      "agent": "backend-eng"
+    },
+    "frontend": {
+      "status": "pending",
+      "agent": "frontend-eng"
+    },
+    "code_review": {
+      "status": "pending",
+      "agent": "qa"
+    },
+    "qa": {
+      "status": "pending",
+      "agent": "qa"
+    },
+    "security": {
+      "status": "pending",
+      "agent": "security"
+    },
+    "staging": {
+      "status": "pending",
+      "agent": "devops"
+    },
+    "production": {
+      "status": "pending",
+      "agent": "devops"
+    },
+    "done": {
+      "status": "pending",
+      "agent": "orchestrator"
+    }
+  },
+  "approval_gates": {
+    "spec_approved": false,
+    "prod_go_nogo": false
+  },
+  "blockers": [],
+  "artifacts": {},
+  "improvements": []
+}

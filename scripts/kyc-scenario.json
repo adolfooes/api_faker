@@ -1,0 +1,302 @@
+{
+  "project": {
+    "name": "iugu-kyc",
+    "description": "Iugu KYC mock scenario for connector integration"
+  },
+  "endpoints": [
+    {
+      "path": "/iugu/accounts",
+      "method": "POST",
+      "description": "CREATE_ACCOUNT",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "account_token": "{{uuid}}",
+            "status": "pending",
+            "created_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["CPF já cadastrado"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/verification",
+      "method": "POST",
+      "description": "REQUEST_VERIFICATION",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "verification_id": "{{uuid}}",
+            "status": "pending",
+            "created_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Dados de verificação inválidos"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/transactions",
+      "method": "POST",
+      "description": "CREATE_TRANSACTION",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "status": "pending",
+            "amount": "{{request.body.amount}}",
+            "created_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Saldo insuficiente"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/refunds",
+      "method": "POST",
+      "description": "REFUND",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "status": "refunded",
+            "refunded_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Transação não reembolsável"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/transactions/query",
+      "method": "GET",
+      "description": "QUERY_TRANSACTION",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "status": "paid",
+            "amount": 0,
+            "created_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Transação não encontrada"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/boletos",
+      "method": "POST",
+      "description": "CREATE_BOLETO",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "barcode": "{{uuid}}",
+            "due_date": "{{now}}",
+            "amount": "{{request.body.amount}}",
+            "status": "pending"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Dados do boleto inválidos"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/pix",
+      "method": "POST",
+      "description": "CREATE_PIX",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "qr_code": "{{uuid}}",
+            "status": "pending",
+            "created_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Chave Pix inválida"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/pix_out",
+      "method": "POST",
+      "description": "PIX_OUT",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "status": "pending",
+            "initiated_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Limite de Pix excedido"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    },
+    {
+      "path": "/iugu/transfers",
+      "method": "POST",
+      "description": "TRANSFER",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "id": "{{uuid}}",
+            "status": "pending",
+            "created_at": "{{now}}"
+          }
+        },
+        {
+          "http_status": 422,
+          "percentage": 0,
+          "model": {
+            "errors": {"message": ["Conta de destino inválida"]},
+            "success": false
+          }
+        },
+        {
+          "http_status": 500,
+          "percentage": 0,
+          "model": {
+            "error": "internal_server_error",
+            "description": "An unexpected error occurred"
+          }
+        }
+      ]
+    }
+  ]
+}

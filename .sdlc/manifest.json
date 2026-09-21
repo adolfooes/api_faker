@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "generated_at": "2026-09-21T08:58:42.457Z",
+  "generated_by": "agent",
+  "project_type": "backend",
+  "stack": {
+    "language": "Go",
+    "framework": "gorilla/mux",
+    "packageManager": "go",
+    "runtime": "go1.23.1"
+  },
+  "commands": {
+    "install": "go mod download",
+    "build": "make build",
+    "test": "make test",
+    "dev": "make up"
+  },
+  "layout": {
+    "sourceDirs": [
+      "cmd",
+      "internal",
+      "pkg",
+      "config"
+    ],
+    "testDirs": [
+      "internal"
+    ]
+  },
+  "agentScope": {
+    "backend-eng": {
+      "writable": [
+        "cmd",
+        "internal",
+        "pkg",
+        "config",
+        "Makefile",
+        "scripts",
+        "README.md"
+      ]
+    },
+    "qa": {
+      "writable": [
+        ".sdlc/reports"
+      ]
+    },
+    "security": {
+      "writable": [
+        ".sdlc/reports"
+      ]
+    },
+    "devops": {
+      "writable": [
+        "scripts",
+        ".github",
+        "Dockerfile",
+        "docker-compose.yml",
+        "docker-compose-local.yml",
+        "Makefile"
+      ]
+    }
+  },
+  "skills": [],
+  "relatedProjects": [
+    {
+      "alias": "connector",
+      "path": "/Users/adolfo/Documents/GitHub/connector",
+      "description": "Middleware Rust/actix POST /connect — roteia infrapay para APIs de parceiras"
+    },
+    {
+      "alias": "infrapay",
+      "path": "/Users/adolfo/Documents/GitHub/infrapay",
+      "description": "API financeira multi-tenant (Rust/axum) — fala com parceiras via connector"
+    }
+  ],
+  "readiness": {
+    "depsInstalled": true,
+    "hasTests": false,
+    "hasEnvExample": false,
+    "notes": [
+      "Nenhum diretório de testes encontrado.",
+      "Sem .env.example — variáveis de ambiente necessárias não documentadas."
+    ]
+  },
+  "codeStyle": {
+    "preset": "composite",
+    "rules": {
+      "maxFunctionLines": 20,
+      "maxFileLines": 300,
+      "noAbbreviations": true,
+      "noGenericNames": true,
+      "earlyReturn": true,
+      "positiveConditions": true,
+      "noMagicValues": true,
+      "extractThreshold": 2,
+      "colocateRelated": true
+    },
+    "detectedIssues": [
+      "Variáveis genéricas `result`, `results`, `values`, `columns`, `rows`, `query` usadas em praticamente todas as funções de crud.go e handlers — difícil rastrear qual 'result' é qual em revisões",
+      "MockHandler em mock.go tem ~90 linhas; CreateAccountHandler em account.go tem ~60 linhas (ambas acima do limiar de 20 linhas)",
+      "Nenhum arquivo de teste encontrado no repositório — cobertura zero",
+      "Literal hardcoded `\"your_secret_key\"` em middleware/middleware.go:14 (a variável env JWT_SECRET_KEY existe em config.go mas não é usada pelo middleware — usa literal local)",
+      "Default connection string hardcoded em config/config.go:12 como fallback quando FAKER_DATABASE_URL está ausente"
+    ],
+    "projectDeviations": [
+      "Sem diretório de testes — layout não tem testDirs; projeto diverge do padrão que espera tests/unit e tests/integration",
+      "Handlers têm média de ~40 linhas; máximo (MockHandler) é 90 linhas — bem acima do padrão de 20 linhas",
+      "isSelect() em crud.go verifica apenas os 6 primeiros caracteres da query — quebra com queries que iniciam com espaço ou comment"
+    ]
+  },
+  "git": {
+    "baseBranch": "main",
+    "branchTemplate": "{KEY}-{slug}",
+    "prTarget": "main"
+  }
+}

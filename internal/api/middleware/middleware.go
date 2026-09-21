@@ -11,8 +11,6 @@ import (
 	"github.com/adolfooes/api_faker/config"
 )
 
-var jwtSecretKey = []byte("your_secret_key") // Same secret key
-
 // Key to use when setting the account ID in context
 type contextKey string
 
@@ -25,19 +23,14 @@ func JWTMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Trim the "Bearer " prefix from the Authorization header
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		// Define a struct to store claims
 		claims := jwt.MapClaims{}
 
-		// Parse the token
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			// Ensure that the method used for signing is HMAC
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, http.ErrUseLastResponse
 			}
-			return jwtSecretKey, nil
+			return config.GetJWTSecretKey(), nil
 		})
 
 		// Handle invalid tokens or errors

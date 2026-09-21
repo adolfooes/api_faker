@@ -1,0 +1,252 @@
+{
+  "run_id": "e2e319ec-e479-4352-aae6-41a52d55daa9",
+  "mode": "improve",
+  "worktree": "/Users/adolfo/.sdlc/worktrees/api_faker-e2e319ec",
+  "branch": "sdlc/e2e319ec",
+  "process": {
+    "pid": 17779,
+    "host": "Adolfos-MacBook-Air.local",
+    "started_at": "2026-09-21T16:09:38.959Z",
+    "heartbeat_at": "2026-09-21T16:51:19.806Z",
+    "status": "finished",
+    "finished_at": "2026-09-21T16:51:19.807Z"
+  },
+  "focus": "(from-doc)",
+  "started_at": "2026-09-21T16:09:38.959Z",
+  "updated_at": "2026-09-21T16:51:19.814Z",
+  "current_phase": "done",
+  "phases": {
+    "discovery": {
+      "status": "done",
+      "agent": "pm",
+      "started_at": "2026-09-21T16:09:39.044Z",
+      "completed_at": "2026-09-21T16:11:36.263Z"
+    },
+    "setup": {
+      "status": "pending",
+      "agent": "devops"
+    },
+    "backend": {
+      "status": "done",
+      "agent": "backend-eng",
+      "started_at": "2026-09-21T16:11:36.271Z",
+      "notes": "Entregas processadas",
+      "completed_at": "2026-09-21T16:51:19.805Z"
+    },
+    "frontend": {
+      "status": "pending",
+      "agent": "frontend-eng"
+    },
+    "code_review": {
+      "status": "pending",
+      "agent": "qa"
+    },
+    "qa": {
+      "status": "pending",
+      "agent": "qa"
+    },
+    "security": {
+      "status": "pending",
+      "agent": "security"
+    },
+    "staging": {
+      "status": "pending",
+      "agent": "devops"
+    },
+    "production": {
+      "status": "pending",
+      "agent": "devops"
+    },
+    "done": {
+      "status": "done",
+      "agent": "orchestrator",
+      "completed_at": "2026-09-21T16:51:19.806Z"
+    }
+  },
+  "approval_gates": {
+    "spec_approved": true,
+    "prod_go_nogo": false
+  },
+  "blockers": [
+    "Falha ao preparar dependências na worktree: \"go mod download\" falhou (exit null): \nError: spawn go ENOENT. Problema de ambiente — corrija e retome com: sdlc resume <path>"
+  ],
+  "artifacts": {
+    "backlog.draft.json": ".sdlc/specs/backlog.draft.json",
+    "mock.go": "internal/api/handler/mock.go",
+    "router.go": "internal/api/router/router.go",
+    "middleware.go": "internal/api/middleware/middleware.go",
+    "main.go": "scripts/seed_kyc/main.go",
+    "Makefile": "Makefile",
+    "README.md": "README.md",
+    "template.go": "internal/api/handler/template.go",
+    "kyc-scenario.json": "scripts/kyc-scenario.json",
+    ".env": "config/.env",
+    "template_test.go": "internal/api/handler/template_test.go",
+    "mock_test.go": "internal/api/handler/mock_test.go",
+    "scenario_test.go": "internal/api/handler/scenario_test.go",
+    "integration_test.go": "internal/api/handler/integration_test.go",
+    "middleware_test.go": "internal/api/middleware/middleware_test.go"
+  },
+  "improvements": [],
+  "deliverables": [
+    {
+      "id": "d1",
+      "title": "Mover rota mock para fora do subrouter JWT",
+      "description": "Registrar `/api/mock/{project_id}/{path:.*}` diretamente no router raiz, fora do subrouter `securedRoutes`. Remover do `MockHandler` todo o bloco de extração de `ownerIDStr` (linhas 90-124) e a chamada a `checkProjectOwnership`. O handler passa a servir o projeto pelo `project_id` do path sem validar dono. Atualizar `validatePath` para aceitar segmentos `{nome}` (necessário para d3). CRUD administrativo (account, project, url_config, url_http_status, response_model) permanece sob JWT.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [],
+      "acceptance": [
+        "GET/POST/PUT/DELETE/PATCH /api/mock/:id/:path responde sem header Authorization",
+        "POST /api/project continua retornando 401 sem JWT",
+        "validatePath aceita paths contendo segmentos no formato {nome}"
+      ],
+      "status": "done",
+      "wave": 0
+    },
+    {
+      "id": "d2",
+      "title": "Corrigir chave JWT no middleware (usar config em vez de hardcode)",
+      "description": "Substituir `var jwtSecretKey = []byte(\"your_secret_key\")` em `middleware.go:14` por `config.GetJWTSecretKey()` resolvido no momento da verificação. No boot (cmd/main.go), após inicializar config, logar aviso se `GetJWTSecretKey()` retornar o valor padrão `your_secret_key`.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [],
+      "acceptance": [
+        "Trocar JWT_SECRET_KEY no .env faz tokens antigos serem recusados sem reiniciar o processo",
+        "Boot com JWT_SECRET_KEY=your_secret_key imprime aviso visível no log de inicialização",
+        "Boot com chave customizada não imprime o aviso"
+      ],
+      "status": "done",
+      "wave": 0
+    },
+    {
+      "id": "d8",
+      "title": "Makefile targets build/test via container + README corrigido",
+      "description": "Adicionar ao Makefile as variáveis e alvos: `GO_CONTAINER = docker run --rm -v \"$(PWD)\":/app -w /app -e GOFLAGS=-buildvcs=false golang:1.23-alpine`, `build: $(GO_CONTAINER) go build ./...`, `test: $(GO_CONTAINER) go test ./...`. Atualizar `.PHONY`. No README.md, remover referências a `make run-local`, `make test-local`, `make migrate-prod` e substituir pelos alvos reais existentes: `up`, `down`, `restart`, `logs`, `migrate`, `shell`, `build`, `test`, `seed-kyc`.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [],
+      "acceptance": [
+        "make build roda sem Go instalado localmente e retorna exit 0 se código compilar",
+        "make test roda sem Go instalado localmente",
+        "README não menciona alvos inexistentes",
+        "README lista todos os alvos do Makefile após a mudança"
+      ],
+      "status": "done",
+      "wave": 0
+    },
+    {
+      "id": "d3",
+      "title": "Path pattern matching com segmentos nomeados em url_config",
+      "description": "Substituir o filtro exato por `path` em `mock.go:128-137` por lógica de matching que suporta segmentos `{nome}` cadastrados em `url_config.path`. Regras: (1) literal ganha de padrão independente da ordem no banco; (2) só casa com o mesmo número de segmentos; (3) `{nome}` cobre exatamente um segmento. O handler deve retornar um mapa dos valores extraídos por segmento nomeado para uso em d4. Buscar todos os `url_config` do `project_id`+`method` e filtrar em memória.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [
+        "d1"
+      ],
+      "acceptance": [
+        "/a/{id}/b cadastrado casa requisição em /a/123/b e extrai {id: \"123\"}",
+        "/a/{id}/b não casa /a/123/456/b (segmentos diferentes)",
+        "Com /a/me e /a/{id} cadastrados, /a/me casa o literal",
+        "Comportamento independe da ordem de inserção no banco"
+      ],
+      "status": "done",
+      "wave": 1
+    },
+    {
+      "id": "d5",
+      "title": "Endpoint POST /api/scenario e GET /api/scenario/{project_id}",
+      "description": "Criar `internal/api/handler/scenario.go` com dois handlers protegidos por JWT. `POST /api/scenario`: recebe o payload descrito no documento (project + endpoints[]), aplica tudo em uma única transação de banco. Idempotente por `(project.name, path, method)`: se já existe, atualiza; não duplica. Valida que soma de `percentage` por endpoint não ultrapassa 100. Devolve os IDs criados/atualizados. `GET /api/scenario/{project_id}`: reconstrói e devolve o cenário completo no mesmo formato do POST. Registrar as rotas no router.go sob `securedRoutes`.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [
+        "d1"
+      ],
+      "acceptance": [
+        "POST /api/scenario cria project, url_config, url_http_status e response_model em uma transação",
+        "Executar o mesmo POST duas vezes não duplica registros em url_config",
+        "Segunda execução atualiza campos existentes",
+        "POST com percentage total > 100 em qualquer endpoint retorna 400 e não grava nada",
+        "POST com erro em qualquer etapa faz rollback completo (nenhuma tabela fica gravada)",
+        "GET /api/scenario/{project_id} devolve estrutura equivalente ao payload do POST"
+      ],
+      "status": "done",
+      "wave": 1
+    },
+    {
+      "id": "d4",
+      "title": "Interpolação de templates no modelo de resposta",
+      "description": "Antes de devolver `responseModel[\"model\"]`, percorrer recursivamente o JSON e substituir tokens: `{{uuid}}` por UUID v4 novo por requisição; `{{now}}` por RFC3339 do momento; `{{request.body.<campo>}}` pelo valor do campo do body lido da requisição (caminho com ponto para nesting); `{{path.<nome>}}` pelo valor extraído pelo matching de d3. Token desconhecido permanece literal. Quando a string é exatamente um token e o valor resolvido não é texto, preservar o tipo original (number, bool). O MockHandler passa a ler `r.Body` antes do matching.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [
+        "d3"
+      ],
+      "acceptance": [
+        "Duas requisições consecutivas ao mesmo endpoint retornam {{uuid}} com valores diferentes",
+        "{{request.body.amount}} com body {\"amount\": 100} devolve número 100, não string \"100\"",
+        "{{request.body.holder.document}} resolve campo aninhado",
+        "{{path.account_id}} resolve para o segmento capturado em d3",
+        "{{token_invalido}} permanece literal na resposta",
+        "Arrays e objetos aninhados são percorridos recursivamente"
+      ],
+      "status": "done",
+      "wave": 2
+    },
+    {
+      "id": "d6",
+      "title": "Seed do cenário de KYC (script + make seed-kyc)",
+      "description": "Criar `scripts/kyc-scenario.json` no formato de d5 cobrindo os nove request_type do connector/config.json para o parceiro iugu: CREATE_ACCOUNT (201, {{uuid}} para account_id e tokens), REQUEST_VERIFICATION, CREATE_TRANSACTION, REFUND, QUERY_TRANSACTION, CREATE_BOLETO, CREATE_PIX, PIX_OUT, TRANSFER (200 com corpo plausível). Para cada endpoint, incluir também as variantes de recusa: http_status 422 com corpo de erro Iugu e 500, ambos com percentage 0. Adicionar ao Makefile alvo `seed-kyc` que faz login com credenciais do .env e executa POST /api/scenario com esse arquivo.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [
+        "d5"
+      ],
+      "acceptance": [
+        "make seed-kyc executa sem erro com stack local rodando",
+        "Executar make seed-kyc duas vezes não duplica registros (idempotência de d5)",
+        "Todos os nove request_type estão presentes no JSON",
+        "Cada endpoint tem ao menos uma entrada com percentage 0 para caminho de recusa 422 e uma para 500",
+        "Soma das percentages do caminho feliz por endpoint é 100"
+      ],
+      "status": "done",
+      "wave": 2
+    },
+    {
+      "id": "d7",
+      "title": "Testes automatizados (primeira suite do repositório)",
+      "description": "Criar testes em Go (httptest) cobrindo os casos do documento, seção 7. Usar banco real via variável de ambiente de teste ou mock de interface `crud` onde banco não é necessário. Arquivos em `internal/api/handler/` e `pkg/`. Casos obrigatórios: mock responde sem Authorization; CRUD admin exige JWT; POST /api/scenario duas vezes não duplica; POST /api/scenario com erro no meio não grava nada; percentage > 100 recusado; {{uuid}} diferente em duas requisições; {{request.body.x}} ecoa valor; tipo preservado para number e bool; token desconhecido permanece literal; /a/{id}/b casa /a/123/b e não /a/123/456/b; literal ganha de parâmetro independente de ordem; GET /api/scenario devolve o que foi cadastrado.",
+      "scope": [
+        "backend"
+      ],
+      "dependsOn": [
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+        "d5"
+      ],
+      "acceptance": [
+        "go test ./... passa com zero falhas",
+        "Todos os casos da seção 7 do documento têm ao menos uma função de teste correspondente",
+        "Testes de handler usam httptest.NewRecorder (sem porta real necessária)",
+        "Nenhum teste depende de estado global mutável entre casos"
+      ],
+      "status": "done",
+      "wave": 3
+    }
+  ],
+  "worktree_env_error": "\"go mod download\" falhou (exit null): \nError: spawn go ENOENT",
+  "completed_steps": {
+    "patterns:record": {
+      "at": "2026-09-21T16:51:19.814Z"
+    }
+  }
+}

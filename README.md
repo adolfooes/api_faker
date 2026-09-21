@@ -5,159 +5,104 @@ API Faker is a RESTful API built with Go that helps developers mock or fake API 
 
 ## Features
 
-- CRUD operations for Accounts and Projects
-- PostgreSQL database connection
+- CRUD operations for Accounts, Projects, URL Configs, HTTP Statuses and Response Models
+- Public mock endpoints — no authentication required to call `/api/mock/:project_id/:path`
+- PostgreSQL database with automatic migrations on startup
 - Modular project structure
 - Configurable using environment variables
-- Local and production Docker configurations
-- Secrets management for sensitive data using environment variables
-- Simple mock endpoints for testing
+- Docker-based local and production environments
+- JWT authentication for administrative routes
 
 ## Requirements
 
-- [Go](https://golang.org/doc/install) 1.18 or later
-- [PostgreSQL](https://www.postgresql.org/download/) (running locally or on a remote server)
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+- Go is **not** required locally — `make build` and `make test` run inside a container
 
 ## Setup
 
 ### 1. Clone the Repository
 
-Clone the repository to your local machine:
-
-\`\`\`bash
+```bash
 git clone https://github.com/adolfooes/api_faker.git
 cd api_faker
-\`\`\`
+```
 
-### 2. Install Go Modules
+### 2. Configure Environment Variables
 
-Install the Go dependencies required for the project:
+Copy or edit `config/.env`:
 
-\`\`\`bash
-go mod tidy
-\`\`\`
-
-This will ensure that all dependencies specified in \`go.mod\` are installed.
-
-### 3. Setup PostgreSQL
-
-#### Create a PostgreSQL Database
-
-Make sure you have PostgreSQL installed and running. Create a new PostgreSQL database for the project:
-
-\`\`\`bash
-createdb api_faker_db
-\`\`\`
-
-You can replace \`api_faker_db\` with the name of your choice.
-
-### 4. Configure Environment Variables
-
-#### Local Development
-
-For local development, environment variables are stored in a \`config.env\` file under the \`config/\` directory.
-
-**Example \`config/config.env\`:**
-
-\`\`\`env
+```env
 FAKER_DATABASE_URL=postgres://postgres:password@db:5432/api_faker_dev?sslmode=disable
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=password
 POSTGRES_DB=api_faker_dev
-\`\`\`
+JWT_SECRET_KEY=change_me_to_a_secure_random_value
+```
 
-### 5. Run the Project Locally with Docker
+> **Warning:** If `JWT_SECRET_KEY` is empty or set to `your_secret_key`, the server will print a warning on startup.
 
-You can run the application in a local development environment using Docker Compose:
+### 3. Start the Project
 
-\`\`\`bash
-make run-local
-\`\`\`
+```bash
+make up
+```
 
-This command will start the app and PostgreSQL database containers using the local Docker Compose configuration (\`docker-compose-local.yml\`).
+This builds and starts the app and PostgreSQL containers.
 
-To stop the containers:
+## Makefile Targets
 
-\`\`\`bash
-make stop-local
-\`\`\`
-
-### 6. Run the Project in Production
-
-To run the project in a production-like environment using Docker Compose:
-
-\`\`\`bash
-make run-prod
-\`\`\`
-
-This command will use \`docker-compose.yml\` to start the app and database containers for production.
-
-To stop the containers:
-
-\`\`\`bash
-make stop-prod
-\`\`\`
-
-### 7. Running Migrations
-
-To apply the database migrations, use the following commands:
-
-- For local development:
-
-  \`\`\`bash
-  make migrate-local
-  \`\`\`
-
-- For production:
-
-  \`\`\`bash
-  make migrate-prod
-  \`\`\`
-
-### 8. Running Tests
-
-To run unit tests:
-
-- For local development:
-
-  \`\`\`bash
-  make test-local
-  \`\`\`
-
-- For production:
-
-  \`\`\`bash
-  make test-prod
-  \`\`\`
+| Target | Description |
+|---|---|
+| `make up` | Build and start all containers |
+| `make down` | Stop and remove containers |
+| `make restart` | Stop then start (equivalent to `down` + `up`) |
+| `make logs` | Tail container logs |
+| `make migrate` | Run pending database migrations inside the app container |
+| `make shell` | Open a shell inside the app container |
+| `make build` | Compile the project (runs inside a Go container — no local Go needed) |
+| `make test` | Run all tests (runs inside a Go container — no local Go needed) |
+| `make seed-kyc` | Seed KYC test data into the database |
 
 ## API Endpoints
 
-### Accounts
+### Public
 
-- \`GET /accounts\`: Retrieve all accounts
-- \`GET /accounts/{id}\`: Retrieve a single account by ID
-- \`POST /accounts\`: Create a new account
-- \`PUT /accounts/{id}\`: Update an account by ID
-- \`DELETE /accounts/{id}\`: Delete an account by ID
+- `POST /login` — authenticate and receive a JWT token
+- `POST /account` — create a new account
+- `GET|POST|PUT|DELETE|PATCH /api/mock/{project_id}/{path}` — serve a mock response for the configured path
 
-### Projects
+### Protected (requires `Authorization: Bearer <token>`)
 
-- \`GET /projects\`: Retrieve all projects
-- \`GET /projects/{id}\`: Retrieve a single project by ID
-- \`POST /projects\`: Create a new project
-- \`PUT /projects/{id}\`: Update a project by ID
-- \`DELETE /projects/{id}\`: Delete a project by ID
+#### Accounts
+- `GET /api/account/{id}` — get account
+- `PUT /api/account/{id}` — update account
+- `DELETE /api/account/{id}` — delete account
 
-## Testing the API
+#### Projects
+- `GET /api/project` — list all projects
+- `GET /api/project/{id}` — get project
+- `POST /api/project` — create project
+- `PUT /api/project/{id}` — update project
+- `DELETE /api/project/{id}` — delete project
 
-You can use \`curl\`, Postman, or any API client to test the API.
+#### URL Configs
+- `GET /api/url_config` — list all URL configs
+- `GET /api/url_config/{id}` — get URL config
+- `POST /api/url_config` — create URL config
+- `PUT /api/url_config/{id}` — update URL config
+- `DELETE /api/url_config/{id}` — delete URL config
 
-For example, to retrieve all accounts:
+#### URL HTTP Statuses
+- `GET /api/url_http_status` — list all HTTP statuses
+- `POST /api/url_http_status` — create HTTP status
+- `PUT /api/url_http_status/{id}` — update HTTP status
+- `DELETE /api/url_http_status/{id}` — delete HTTP status
 
-\`\`\`bash
-curl -X GET http://localhost:8080/accounts
-\`\`\`
+#### Response Models
+- `GET /api/response_model` — list all response models
+- `POST /api/response_model` — create response model
+- `PUT /api/response_model/{id}` — update response model
+- `DELETE /api/response_model/{id}` — delete response model
 
 ## License
 
