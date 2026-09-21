@@ -1,0 +1,1011 @@
+{
+  "info": {
+    "name": "API Faker - KYC",
+    "description": "Cadastro e exercicio dos mocks que sustentam o fluxo de KYC do infrapay.\n\nDUAS COISAS NAO OBVIAS:\n\n1. /api/mock/... e PUBLICA. As rotas administrativas (/api/account, /api/project, /api/scenario, /api/url_*) exigem Bearer. O mock nao, porque quem o consome e o connector, que manda a credencial do PARCEIRO simulado -- nao um JWT deste servico.\n\n2. O mock responde o corpo CRU cadastrado, sem envelope. As rotas administrativas respondem {message, data}.\n\nOs nove endpoints do cenario batem exatamente com os request_type que connector/config.json cadastra para o parceiro iugu.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "faker_url",
+      "value": "http://localhost:8080",
+      "description": ""
+    },
+    {
+      "key": "faker_email",
+      "value": "kyc@apifaker.dev",
+      "description": "conta administrativa do api_faker"
+    },
+    {
+      "key": "faker_password",
+      "value": "Seed@1234!",
+      "description": "min 8, maiuscula, minuscula, numero e simbolo"
+    },
+    {
+      "key": "faker_token",
+      "value": "",
+      "description": "capturado no login"
+    },
+    {
+      "key": "project_id",
+      "value": "",
+      "description": "capturado ao aplicar o cenario"
+    },
+    {
+      "key": "partner_account_id",
+      "value": "",
+      "description": "id devolvido pelo mock de CREATE_ACCOUNT"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Bootstrap",
+      "item": [
+        {
+          "name": "Criar conta administrativa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/account",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "account"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{faker_email}}\",\n  \"password\": \"{{faker_password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('criada ou ja existente', function(){",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,400,409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/login",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{faker_email}}\",\n  \"password\": \"{{faker_password}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set('faker_token', j.data.token);",
+                  "pm.test('token no envelope data', function(){ pm.expect(j.data.token).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Cenario de KYC",
+      "description": "POST /api/scenario aplica projeto + endpoints + status + corpos numa transacao unica. Idempotente por (projeto, path, metodo): reaplicar atualiza, nao duplica. Duplicata em url_config faria o mock escolher a primeira linha sem criterio.",
+      "item": [
+        {
+          "name": "Aplicar cenario completo (9 endpoints do iugu)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{faker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/scenario",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "scenario"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project\": {\n    \"name\": \"iugu-kyc\",\n    \"description\": \"Iugu KYC mock scenario for connector integration\"\n  },\n  \"endpoints\": [\n    {\n      \"path\": \"/iugu/accounts\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_ACCOUNT\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"account_token\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"CPF já cadastrado\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/verification\",\n      \"method\": \"POST\",\n      \"description\": \"REQUEST_VERIFICATION\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"verification_id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Dados de verificação inválidos\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/transactions\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_TRANSACTION\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"amount\": \"{{request.body.amount}}\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Saldo insuficiente\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/refunds\",\n      \"method\": \"POST\",\n      \"description\": \"REFUND\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"refunded\",\n            \"refunded_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Transação não reembolsável\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/transactions/query\",\n      \"method\": \"GET\",\n      \"description\": \"QUERY_TRANSACTION\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"paid\",\n            \"amount\": 0,\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Transação não encontrada\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/boletos\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_BOLETO\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"barcode\": \"{{uuid}}\",\n            \"due_date\": \"{{now}}\",\n            \"amount\": \"{{request.body.amount}}\",\n            \"status\": \"pending\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Dados do boleto inválidos\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/pix\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_PIX\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"qr_code\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Chave Pix inválida\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/pix_out\",\n      \"method\": \"POST\",\n      \"description\": \"PIX_OUT\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"initiated_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Limite de Pix excedido\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/transfers\",\n      \"method\": \"POST\",\n      \"description\": \"TRANSFER\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Conta de destino inválida\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set('project_id', j.data.project_id);",
+                  "pm.test('nove endpoints aplicados', function(){",
+                  "  pm.expect(j.data.endpoints.length).to.eql(9);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reaplicar (prova a idempotencia)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{faker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/scenario",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "scenario"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project\": {\n    \"name\": \"iugu-kyc\",\n    \"description\": \"Iugu KYC mock scenario for connector integration\"\n  },\n  \"endpoints\": [\n    {\n      \"path\": \"/iugu/accounts\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_ACCOUNT\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"account_token\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"CPF já cadastrado\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/verification\",\n      \"method\": \"POST\",\n      \"description\": \"REQUEST_VERIFICATION\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"verification_id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Dados de verificação inválidos\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/transactions\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_TRANSACTION\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"amount\": \"{{request.body.amount}}\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Saldo insuficiente\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/refunds\",\n      \"method\": \"POST\",\n      \"description\": \"REFUND\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"refunded\",\n            \"refunded_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Transação não reembolsável\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/transactions/query\",\n      \"method\": \"GET\",\n      \"description\": \"QUERY_TRANSACTION\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"paid\",\n            \"amount\": 0,\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Transação não encontrada\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/boletos\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_BOLETO\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"barcode\": \"{{uuid}}\",\n            \"due_date\": \"{{now}}\",\n            \"amount\": \"{{request.body.amount}}\",\n            \"status\": \"pending\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Dados do boleto inválidos\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/pix\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_PIX\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"qr_code\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Chave Pix inválida\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/pix_out\",\n      \"method\": \"POST\",\n      \"description\": \"PIX_OUT\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"initiated_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Limite de Pix excedido\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    },\n    {\n      \"path\": \"/iugu/transfers\",\n      \"method\": \"POST\",\n      \"description\": \"TRANSFER\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        },\n        {\n          \"http_status\": 422,\n          \"percentage\": 0,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"Conta de destino inválida\"\n              ]\n            },\n            \"success\": false\n          }\n        },\n        {\n          \"http_status\": 500,\n          \"percentage\": 0,\n          \"model\": {\n            \"error\": \"internal_server_error\",\n            \"description\": \"An unexpected error occurred\"\n          }\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('mesmo project_id, sem duplicar', function(){",
+                  "  pm.expect(String(j.data.project_id)).to.eql(String(pm.collectionVariables.get('project_id')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ler o cenario cadastrado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{faker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/scenario/{{project_id}}",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "scenario",
+                "{{project_id}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('devolve o que foi aplicado', function(){",
+                  "  pm.expect(pm.response.json().data.endpoints.length).to.eql(9);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Mock: como o connector chama",
+      "description": "Exatamente as nove chamadas que connector/config.json faz para o parceiro iugu, SEM Authorization -- que e o que a correcao destravou. Antes disso toda uma levava 401 antes de olhar qualquer configuracao.\n\nO mock responde o corpo cru cadastrado, nao o envelope {message,data} das rotas administrativas.",
+      "item": [
+        {
+          "name": "CREATE_ACCOUNT  (POST /iugu/accounts)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/accounts",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Conta Teste KYC\",\n  \"document\": \"11222333000181\",\n  \"email\": \"kyc@teste.local\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.collectionVariables.set('partner_account_id', j.id);",
+                  "pm.test('responde SEM Authorization (mock e publico)', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});",
+                  "pm.test('corpo cru, sem envelope {message,data}', function(){",
+                  "  pm.expect(j).to.not.have.property('message');",
+                  "  pm.expect(j.id).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE_BOLETO  (POST /iugu/boletos)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/boletos",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "boletos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 15000,\n  \"due_date\": \"2026-12-31\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE_PIX  (POST /iugu/pix)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/pix",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "pix"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 15000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE_TRANSACTION  (POST /iugu/transactions)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/transactions",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 15000,\n  \"description\": \"cobranca de teste\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PIX_OUT  (POST /iugu/pix_out)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/pix_out",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "pix_out"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 15000,\n  \"pix_key\": \"kyc@teste.local\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "QUERY_TRANSACTION  (GET /iugu/transactions/query)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/transactions/query",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "transactions",
+                "query"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REFUND  (POST /iugu/refunds)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/refunds",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "refunds"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_id\": \"tx-123\",\n  \"amount\": 15000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "REQUEST_VERIFICATION  (POST /iugu/verification)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/verification",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "verification"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"{{partner_account_id}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "TRANSFER  (POST /iugu/transfers)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/transfers",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "transfers"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 15000,\n  \"bank_code\": \"001\",\n  \"agency\": \"0001\",\n  \"account\": \"123456\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('responde sem Authorization', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Interpolacao",
+      "description": "O corpo cadastrado nao e devolvido tal qual: {{uuid}}, {{now}}, {{request.body.x}} e {{path.x}} sao resolvidos por requisicao. Sem isso CREATE_ACCOUNT devolveria o mesmo id para toda conta, e o infrapay grava esse valor como partner_account_id -- duas contas colidiriam.",
+      "item": [
+        {
+          "name": "CREATE_ACCOUNT duas vezes deve dar ids DIFERENTES",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/accounts",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Conta Teste KYC\",\n  \"document\": \"11222333000181\",\n  \"email\": \"kyc@teste.local\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var j = pm.response.json();",
+                  "var anterior = pm.collectionVariables.get('partner_account_id');",
+                  "pm.test('{{uuid}} resolve novo a cada chamada', function(){",
+                  "  pm.expect(j.id).to.not.eql(anterior);",
+                  "});",
+                  "pm.collectionVariables.set('partner_account_id', j.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Path com parametro",
+      "description": "url_config.path aceita {nome}. Rota literal ganha de rota com parametro, independente da ordem de insercao -- senao a resposta dependeria de qual linha o banco devolvesse primeiro.",
+      "item": [
+        {
+          "name": "Cadastrar rota com parametro",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{faker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/scenario",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "scenario"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project\": {\n    \"name\": \"iugu-kyc\"\n  },\n  \"endpoints\": [\n    {\n      \"path\": \"/iugu/accounts/{account_id}/verification\",\n      \"method\": \"POST\",\n      \"description\": \"verificacao por conta\",\n      \"statuses\": [\n        {\n          \"http_status\": 200,\n          \"percentage\": 100,\n          \"model\": {\n            \"account_id\": \"{{path.account_id}}\",\n            \"status\": \"in_review\",\n            \"echo_motivo\": \"{{request.body.reason}}\"\n          }\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('aplicado', function(){ pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Chamar com id concreto: {{path.account_id}} e o eco do corpo resolvem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/accounts/{{partner_account_id}}/verification",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "accounts",
+                "{{partner_account_id}}",
+                "verification"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"documentacao reenviada\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var j = pm.response.json();",
+                  "pm.test('path param resolvido', function(){",
+                  "  pm.expect(j.account_id).to.eql(pm.collectionVariables.get('partner_account_id'));",
+                  "});",
+                  "pm.test('campo do corpo ecoado', function(){",
+                  "  pm.expect(j.echo_motivo).to.eql('documentacao reenviada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Segmento a mais nao casa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/accounts/abc/extra/verification",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "accounts",
+                "abc",
+                "extra",
+                "verification"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('{param} cobre UM segmento, nunca varios', function(){",
+                  "  pm.expect(pm.response.code).to.eql(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Caminhos de recusa",
+      "description": "O cenario ja traz 422 e 500 com percentage 0 -- presentes e sem atrapalhar o fluxo feliz. Suba o peso para exercitar os cenarios S6, S8, S10 e S11 de .sdlc/knowledge/kyc_flow_account_creation.md do infrapay.",
+      "item": [
+        {
+          "name": "Virar CREATE_ACCOUNT para 100% de recusa (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{faker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/scenario",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "scenario"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project\": {\n    \"name\": \"iugu-kyc\"\n  },\n  \"endpoints\": [\n    {\n      \"path\": \"/iugu/accounts\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_ACCOUNT (recusa)\",\n      \"statuses\": [\n        {\n          \"http_status\": 422,\n          \"percentage\": 100,\n          \"model\": {\n            \"errors\": {\n              \"message\": [\n                \"CPF ja cadastrado\"\n              ]\n            },\n            \"success\": false\n          }\n        }\n      ]\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('reaplicacao troca o comportamento sem duplicar', function(){",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agora CREATE_ACCOUNT recusa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/accounts",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "accounts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Conta Teste KYC\",\n  \"document\": \"11222333000181\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('422 do parceiro', function(){ pm.expect(pm.response.code).to.eql(422); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restaurar o fluxo feliz",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{faker_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/scenario",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "scenario"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project\": {\n    \"name\": \"iugu-kyc\"\n  },\n  \"endpoints\": [\n    {\n      \"path\": \"/iugu/accounts\",\n      \"method\": \"POST\",\n      \"description\": \"CREATE_ACCOUNT\",\n      \"statuses\": [\n        {\n          \"http_status\": 201,\n          \"percentage\": 100,\n          \"model\": {\n            \"id\": \"{{uuid}}\",\n            \"account_token\": \"{{uuid}}\",\n            \"status\": \"pending\",\n            \"created_at\": \"{{now}}\"\n          }\n        }\n      ]\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Auth: o que e publico e o que nao e",
+      "item": [
+        {
+          "name": "Rota administrativa SEM token deve dar 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/project",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "project"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('CRUD administrativo continua protegido', function(){",
+                  "  pm.expect(pm.response.code).to.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mock SEM token NAO pode dar 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{faker_url}}/api/mock/{{project_id}}/iugu/transactions/query",
+              "host": [
+                "{{faker_url}}"
+              ],
+              "path": [
+                "api",
+                "mock",
+                "{{project_id}}",
+                "iugu",
+                "transactions",
+                "query"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('entrega do mock e publica', function(){",
+                  "  pm.expect(pm.response.code).to.not.eql(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

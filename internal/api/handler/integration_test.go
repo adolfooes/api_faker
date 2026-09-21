@@ -341,3 +341,51 @@ func TestGetScenarioHandler_ReturnsCreatedData(t *testing.T) {
 		t.Errorf("expected 1 project in DB, got %d", dbCount)
 	}
 }
+
+// Reaplicar um cenario com MENOS status tem de remover os que sobraram.
+//
+// O upsert por (url_id, http_status) so acrescentava: aplicar 201 e depois
+// reaplicar so com 422 deixava os dois cadastrados a 100% cada, somando 200%,
+// e o sorteio servia um ou outro ao acaso -- o sintoma era o mock responder a
+// configuracao ANTERIOR. A validacao de percentual nao pegava porque confere o
+// payload que chega, nao o estado do banco.
+func TestCreateScenarioHandler_PrunesStatusesNotInPayload(t *testing.T) {
+	initTestDB(t)
+	db := internaldb.GetDB()
+	accountID, cleanup := createTestAccount(t, db)
+	defer cleanup()
+	router := buildTestRouter(accountID)
+
+	apply := func(body string) {
+		t.Helper()
+		req := httptest.NewRequest(http.MethodPost, "/api/scenario", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		if rec.Code != http.StatusOK && rec.Code != http.StatusCreated {
+			t.Fatalf("aplicar cenario: %d %s", rec.Code, rec.Body.String())
+		}
+	}
+
+	apply(`{"project":{"name":"prune-test"},"endpoints":[{"path":"/p","method":"POST","statuses":[
+		{"http_status":201,"percentage":100,"model":{"a":1}}]}]}`)
+	apply(`{"project":{"name":"prune-test"},"endpoints":[{"path":"/p","method":"POST","statuses":[
+		{"http_status":422,"percentage":100,"model":{"b":2}}]}]}`)
+
+	var total, sum int
+	err := db.QueryRow(`
+		SELECT COUNT(*), COALESCE(SUM(uhs.percentage),0)
+		FROM url_http_status uhs
+		JOIN url_config uc ON uc.id = uhs.url_id
+		JOIN project p ON p.id = uc.project_id
+		WHERE p.name = 'prune-test' AND uc.path = '/p'`).Scan(&total, &sum)
+	if err != nil {
+		t.Fatalf("consulta: %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("esperado 1 status apos a reaplicacao, veio %d -- os antigos nao foram podados", total)
+	}
+	if sum != 100 {
+		t.Fatalf("percentual somado devia ser 100, veio %d", sum)
+	}
+}

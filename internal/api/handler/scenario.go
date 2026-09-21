@@ -169,6 +169,33 @@ func CreateScenarioHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// O cenario declara o estado COMPLETO do endpoint: status que estava
+		// cadastrado e nao vem no payload tem de sair. Sem isto o upsert por
+		// (url_id, http_status) so acrescenta -- reaplicar o cenario com 422
+		// deixava o 201 antigo intacto, os dois a 100%, somando 200% e
+		// servindo um ou outro ao acaso. A validacao de percentual nao pegava,
+		// porque confere o payload que chega, nao o que ja esta no banco.
+		// ON DELETE CASCADE leva junto o response_model.
+		if len(ep.Statuses) > 0 {
+			keep := make([]interface{}, 0, len(ep.Statuses)+1)
+			placeholders := ""
+			keep = append(keep, urlConfigID)
+			for i, st := range ep.Statuses {
+				if i > 0 {
+					placeholders += ", "
+				}
+				placeholders += fmt.Sprintf("$%d", i+2)
+				keep = append(keep, st.HTTPStatus)
+			}
+			if _, err = tx.Exec(
+				fmt.Sprintf(`DELETE FROM url_http_status WHERE url_id = $1 AND http_status NOT IN (%s)`, placeholders),
+				keep...,
+			); err != nil {
+				response.SendResponse(w, http.StatusInternalServerError, "Failed to prune url_http_status", err.Error(), nil, false)
+				return
+			}
+		}
+
 		var statusResults []ScenarioStatusResult
 
 		for _, st := range ep.Statuses {
