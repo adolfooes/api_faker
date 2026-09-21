@@ -31,3 +31,17 @@ shell:
 
 # Default target if no target is provided
 .PHONY: swagger up down restart logs migrate shell
+
+# ---- Go via container ----
+# O toolchain Go nao esta instalado na maquina; usa a MESMA imagem do
+# builder do Dockerfile para que build e teste rodem contra a versao que
+# de fato vai a producao.
+GO_CONTAINER = docker run --rm -v "$(PWD)":/app -w /app -e GOFLAGS=-buildvcs=false golang:1.23-alpine
+
+build:
+	$(GO_CONTAINER) go build ./...
+
+test:
+	$(GO_CONTAINER) go test ./...
+
+.PHONY: build test
