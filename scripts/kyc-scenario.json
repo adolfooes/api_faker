@@ -13,17 +13,25 @@
           "http_status": 201,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "account_token": "{{uuid}}",
-            "status": "pending",
-            "created_at": "{{now}}"
+            "success": true,
+            "data": {
+              "account_id": "{{uuid}}",
+              "token": "{{uuid}}",
+              "api_key": "{{uuid}}",
+              "status": "pending",
+              "created_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["CPF já cadastrado"]},
+            "errors": {
+              "message": [
+                "CPF já cadastrado"
+              ]
+            },
             "success": false
           }
         },
@@ -31,8 +39,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -46,16 +55,23 @@
           "http_status": 200,
           "percentage": 100,
           "model": {
-            "verification_id": "{{uuid}}",
-            "status": "pending",
-            "created_at": "{{now}}"
+            "success": true,
+            "data": {
+              "verification_id": "{{uuid}}",
+              "status": "pending",
+              "created_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Dados de verificação inválidos"]},
+            "errors": {
+              "message": [
+                "Dados de verificação inválidos"
+              ]
+            },
             "success": false
           }
         },
@@ -63,8 +79,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -78,17 +95,24 @@
           "http_status": 201,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "status": "pending",
-            "amount": "{{request.body.amount}}",
-            "created_at": "{{now}}"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "status": "pending",
+              "amount": "{{request.body.amount}}",
+              "created_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Saldo insuficiente"]},
+            "errors": {
+              "message": [
+                "Saldo insuficiente"
+              ]
+            },
             "success": false
           }
         },
@@ -96,8 +120,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -111,16 +136,23 @@
           "http_status": 200,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "status": "refunded",
-            "refunded_at": "{{now}}"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "status": "refunded",
+              "refunded_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Transação não reembolsável"]},
+            "errors": {
+              "message": [
+                "Transação não reembolsável"
+              ]
+            },
             "success": false
           }
         },
@@ -128,8 +160,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -143,17 +176,24 @@
           "http_status": 200,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "status": "paid",
-            "amount": 0,
-            "created_at": "{{now}}"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "status": "paid",
+              "amount": 0,
+              "created_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Transação não encontrada"]},
+            "errors": {
+              "message": [
+                "Transação não encontrada"
+              ]
+            },
             "success": false
           }
         },
@@ -161,8 +201,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -176,18 +217,25 @@
           "http_status": 201,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "barcode": "{{uuid}}",
-            "due_date": "{{now}}",
-            "amount": "{{request.body.amount}}",
-            "status": "pending"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "barcode": "{{uuid}}",
+              "due_date": "{{now}}",
+              "amount": "{{request.body.amount}}",
+              "status": "pending"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Dados do boleto inválidos"]},
+            "errors": {
+              "message": [
+                "Dados do boleto inválidos"
+              ]
+            },
             "success": false
           }
         },
@@ -195,8 +243,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -210,17 +259,24 @@
           "http_status": 201,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "qr_code": "{{uuid}}",
-            "status": "pending",
-            "created_at": "{{now}}"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "qr_code": "{{uuid}}",
+              "status": "pending",
+              "created_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Chave Pix inválida"]},
+            "errors": {
+              "message": [
+                "Chave Pix inválida"
+              ]
+            },
             "success": false
           }
         },
@@ -228,8 +284,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -243,16 +300,23 @@
           "http_status": 201,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "status": "pending",
-            "initiated_at": "{{now}}"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "status": "pending",
+              "initiated_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Limite de Pix excedido"]},
+            "errors": {
+              "message": [
+                "Limite de Pix excedido"
+              ]
+            },
             "success": false
           }
         },
@@ -260,8 +324,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
@@ -275,16 +340,23 @@
           "http_status": 201,
           "percentage": 100,
           "model": {
-            "id": "{{uuid}}",
-            "status": "pending",
-            "created_at": "{{now}}"
+            "success": true,
+            "data": {
+              "id": "{{uuid}}",
+              "status": "pending",
+              "created_at": "{{now}}"
+            }
           }
         },
         {
           "http_status": 422,
           "percentage": 0,
           "model": {
-            "errors": {"message": ["Conta de destino inválida"]},
+            "errors": {
+              "message": [
+                "Conta de destino inválida"
+              ]
+            },
             "success": false
           }
         },
@@ -292,8 +364,9 @@
           "http_status": 500,
           "percentage": 0,
           "model": {
-            "error": "internal_server_error",
-            "description": "An unexpected error occurred"
+            "success": false,
+            "error": "{\"error\": \"internal_server_error\", \"description\": \"An unexpected error occurred\"}",
+            "data": null
           }
         }
       ]
