@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -175,6 +176,29 @@ func MockHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.SendResponse(w, int(selectedStatus["http_status"].(int64)), "", "", finalModel, true)
+
+	// Chained webhooks (if any) are fired asynchronously, after the response above
+	// was already written, with access to the originating request body and to the
+	// mocked response just served via {{request.body.X}} / {{response.X}}.
+	if webhooks := parseScenarioWebhooks(urlConfig["webhooks"]); len(webhooks) > 0 {
+		var projectIDPtr *int64
+		if pid, ok := urlConfig["project_id"].(int64); ok {
+			projectIDPtr = &pid
+		}
+		project, err := crud.Read("project", int64(projectID))
+		if err != nil {
+			log.Printf("webhook_dispatch: failed to resolve project owner for project_id %d: %v", projectID, err)
+			return
+		}
+		ownerID, ok := project["owner_id"].(int64)
+		if !ok {
+			log.Printf("webhook_dispatch: project %d has no owner_id, skipping chained webhooks", projectID)
+			return
+		}
+		responseMap, _ := finalModel.(map[string]interface{})
+		whCtx := templateContext{body: requestBody, pathParams: pathParams, response: responseMap}
+		fireScenarioWebhooks(webhooks, projectIDPtr, ownerID, whCtx)
+	}
 }
 
 // randomizeHTTPStatus selects a status based on the percentage distribution

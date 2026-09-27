@@ -21,10 +21,11 @@ type ScenarioStatusInput struct {
 }
 
 type ScenarioEndpointInput struct {
-	Path        string                `json:"path"`
-	Method      string                `json:"method"`
-	Description string                `json:"description"`
-	Statuses    []ScenarioStatusInput `json:"statuses"`
+	Path        string                 `json:"path"`
+	Method      string                 `json:"method"`
+	Description string                 `json:"description"`
+	Statuses    []ScenarioStatusInput  `json:"statuses"`
+	Webhooks    []ScenarioWebhookInput `json:"webhooks,omitempty"`
 }
 
 type ScenarioProjectInput struct {
@@ -72,6 +73,11 @@ func validateScenarioInput(input ScenarioInput) error {
 		}
 		if total > 100 {
 			return fmt.Errorf("endpoints[%d]: sum of percentage (%d) exceeds 100", i, total)
+		}
+		for j, wh := range ep.Webhooks {
+			if wh.TargetURL == "" {
+				return fmt.Errorf("endpoints[%d].webhooks[%d].target_url is required", i, j)
+			}
 		}
 	}
 	return nil
@@ -141,6 +147,13 @@ func CreateScenarioHandler(w http.ResponseWriter, r *http.Request) {
 	var endpointResults []ScenarioEndpointResult
 
 	for _, ep := range input.Endpoints {
+		webhooksBytes, err := json.Marshal(ep.Webhooks)
+		if err != nil {
+			response.SendResponse(w, http.StatusBadRequest, "Invalid webhooks payload", err.Error(), nil, false)
+			return
+		}
+		webhooksJSON := string(webhooksBytes)
+
 		// Upsert url_config by (project_id, path, method)
 		var urlConfigID int64
 		err = tx.QueryRow(
@@ -149,8 +162,8 @@ func CreateScenarioHandler(w http.ResponseWriter, r *http.Request) {
 		).Scan(&urlConfigID)
 		if err == sql.ErrNoRows {
 			err = tx.QueryRow(
-				`INSERT INTO url_config (path, method, description, project_id) VALUES ($1, $2, $3, $4) RETURNING id`,
-				ep.Path, ep.Method, ep.Description, projectID,
+				`INSERT INTO url_config (path, method, description, project_id, webhooks) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+				ep.Path, ep.Method, ep.Description, projectID, webhooksJSON,
 			).Scan(&urlConfigID)
 			if err != nil {
 				response.SendResponse(w, http.StatusInternalServerError, "Failed to create url_config", err.Error(), nil, false)
@@ -161,8 +174,8 @@ func CreateScenarioHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			if _, err = tx.Exec(
-				`UPDATE url_config SET description = $1 WHERE id = $2`,
-				ep.Description, urlConfigID,
+				`UPDATE url_config SET description = $1, webhooks = $2 WHERE id = $3`,
+				ep.Description, webhooksJSON, urlConfigID,
 			); err != nil {
 				response.SendResponse(w, http.StatusInternalServerError, "Failed to update url_config", err.Error(), nil, false)
 				return
@@ -290,9 +303,24 @@ func GetScenarioHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ownerID, err := currentOwnerID(r)
+	if err != nil {
+		response.SendResponse(w, http.StatusUnauthorized, "Unauthorized: Owner ID not found", "", nil, false)
+		return
+	}
+	owned, err := validateProjectOwnership(int(projectID), ownerID)
+	if err != nil {
+		response.SendResponse(w, http.StatusInternalServerError, "Failed to validate project ownership", "", nil, false)
+		return
+	}
+	if !owned {
+		response.SendResponse(w, http.StatusForbidden, "Unauthorized: project does not belong to this account", "", nil, false)
+		return
+	}
+
 	project, err := crud.Read("project", projectID)
 	if err != nil {
-		response.SendResponse(w, http.StatusNotFound, "Project not found", err.Error(), nil, false)
+		response.SendResponse(w, http.StatusNotFound, "Project not found", "", nil, false)
 		return
 	}
 
@@ -308,10 +336,11 @@ func GetScenarioHandler(w http.ResponseWriter, r *http.Request) {
 		Model      json.RawMessage `json:"model"`
 	}
 	type EndpointOutput struct {
-		Path        string         `json:"path"`
-		Method      string         `json:"method"`
-		Description string         `json:"description"`
-		Statuses    []StatusOutput `json:"statuses"`
+		Path        string                 `json:"path"`
+		Method      string                 `json:"method"`
+		Description string                 `json:"description"`
+		Statuses    []StatusOutput         `json:"statuses"`
+		Webhooks    []ScenarioWebhookInput `json:"webhooks,omitempty"`
 	}
 	type ScenarioOutput struct {
 		Project   map[string]interface{} `json:"project"`
@@ -370,6 +399,7 @@ func GetScenarioHandler(w http.ResponseWriter, r *http.Request) {
 			Method:      uc["method"].(string),
 			Description: description,
 			Statuses:    statusOutputs,
+			Webhooks:    maskScenarioWebhooks(parseScenarioWebhooks(uc["webhooks"])),
 		})
 	}
 

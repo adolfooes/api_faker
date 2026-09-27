@@ -3,7 +3,7 @@ DOCKER_COMPOSE_LOCAL = docker-compose-local.yml
 
 TEST_DB_ENV = $(if $(TEST_DATABASE_URL),-e TEST_DATABASE_URL="$(TEST_DATABASE_URL)",)
 GO_IMAGE = golang:1.23-alpine
-DOCKER_GO = docker run --rm --network host -v "$(PWD)":/app -w /app -e GOFLAGS=-buildvcs=false
+DOCKER_GO = docker run --rm --network host -v "$(CURDIR)":/app -w /app -e GOFLAGS=-buildvcs=false
 GO_CONTAINER = $(DOCKER_GO) $(GO_IMAGE)
 
 # Target to start the services (build and run)

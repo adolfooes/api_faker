@@ -14,6 +14,10 @@ var tokenRe = regexp.MustCompile(`\{\{([^}]+)\}\}`)
 type templateContext struct {
 	body       map[string]interface{}
 	pathParams map[string]string
+	// response holds the mocked response already served for the request that
+	// originated a chained webhook, so its body can be referenced via
+	// {{response.X}} (e.g. {{response.data.id}}).
+	response map[string]interface{}
 }
 
 func generateUUID() string {
@@ -41,6 +45,12 @@ func resolveToken(token string, ctx templateContext) interface{} {
 			name := token[len("path."):]
 			if v, ok := ctx.pathParams[name]; ok {
 				return v
+			}
+		} else if strings.HasPrefix(token, "response.") {
+			field := token[len("response."):]
+			val := getNestedField(ctx.response, strings.Split(field, "."))
+			if val != nil {
+				return val
 			}
 		}
 		return "{{" + token + "}}"
