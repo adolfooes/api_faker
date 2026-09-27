@@ -110,6 +110,56 @@ This builds and starts the app and PostgreSQL containers.
 - `PUT /api/response_model/{id}` — update response model
 - `DELETE /api/response_model/{id}` — delete response model
 
+#### Webhooks
+- `POST /api/webhook/dispatch` — fire one outbound webhook on demand
+- `GET /api/webhook/dispatch?project_id={id}` — list recent webhook dispatches (any origin), optionally filtered by `project_id`
+
+`POST /api/webhook/dispatch` body:
+
+```json
+{
+  "project_id": 1,
+  "target_url": "https://example.com/webhook",
+  "method": "POST",
+  "content_type": "application/x-www-form-urlencoded",
+  "headers": { "X-Signature": "{{uuid}}" },
+  "body": { "event": "invoice.status_changed", "data": { "id": "{{uuid}}", "status": "paid" } }
+}
+```
+
+Returns `{ status, response_headers, response_body, duration_ms, error }`. `method` defaults to `POST`, `content_type` defaults to `application/json`. Supported `content_type` values:
+- `application/json` — `body` is JSON-encoded as-is
+- `application/x-www-form-urlencoded` — `body` as a nested object is flattened to Iugu's `data[field]=value` style (two levels of nesting supported); `body` as a string is sent raw, unchanged
+
+Both `headers` values and `body` fields support the same template tokens as response models (`{{uuid}}`, `{{now}}`, etc. — see `internal/api/handler/template.go`).
+
+Outbound request timeout defaults to 10s, configurable via `WEBHOOK_TIMEOUT_SECONDS`. No automatic retry on failure or timeout — the attempt is logged either way.
+
+**Allowed targets.** Loopback and private-network targets are blocked unless the host is listed in `WEBHOOK_ALLOWED_HOSTS` (comma-separated hostnames/IPs, default `localhost,127.0.0.1,host.docker.internal`) — list the local services you want to receive webhooks (e.g. the infrapay container name). Link-local addresses (cloud metadata, `169.254.169.254`) are always blocked. The check runs on the IP actually being connected to, so DNS rebinding cannot bypass it. Target response bodies are truncated at 1 MiB, and `POST /api/webhook/dispatch` is rate limited per account (5 req/s, burst 20).
+
+##### Scenario-chained webhooks
+
+A scenario endpoint (`POST /scenario`) can declare a `webhooks` array, fired asynchronously after its mocked response has already been served:
+
+```json
+{
+  "path": "/invoices/pay",
+  "method": "POST",
+  "statuses": [...],
+  "webhooks": [
+    {
+      "delay_ms": 500,
+      "target_url": "https://example.com/webhook",
+      "content_type": "application/x-www-form-urlencoded",
+      "headers": { "X-Signature": "{{uuid}}" },
+      "body": { "event": "invoice.status_changed", "data": { "id": "{{response.data.id}}", "cpf": "{{request.body.cpf}}" } }
+    }
+  ]
+}
+```
+
+Templates can reach both the request that triggered the mock (`{{request.body.<field>}}`) and the mocked response just served (`{{response.<field>}}`). Endpoints without `webhooks` behave exactly as before. Every dispatch — admin-triggered or scenario-chained — is logged and visible via `GET /api/webhook/dispatch`.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.

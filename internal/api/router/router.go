@@ -53,6 +53,10 @@ func InitializeRouter() *mux.Router {
 	securedRoutes.HandleFunc("/scenario", handler.CreateScenarioHandler).Methods("POST")
 	securedRoutes.HandleFunc("/scenario/{project_id:[0-9]+}", handler.GetScenarioHandler).Methods("GET")
 
+	// Webhook dispatch routes under /api
+	securedRoutes.HandleFunc("/webhook/dispatch", handler.WebhookDispatchHandler).Methods("POST")
+	securedRoutes.HandleFunc("/webhook/dispatch", handler.ListWebhookDispatchesHandler).Methods("GET")
+
 	// Mock route is public — no JWT required
 	router.HandleFunc("/api/mock/{project_id}/{path:.*}", handler.MockHandler).Methods("GET", "POST", "PUT", "DELETE", "PATCH")
 
