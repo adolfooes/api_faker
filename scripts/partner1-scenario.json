@@ -180,6 +180,91 @@
           }
         }
       ]
+    },
+    {
+      "path": "/partner1/bills/consult",
+      "method": "POST",
+      "description": "CONSULT_BILL",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "barcode": "{{request.body.payload.barcode}}",
+              "digitable_line": "34191.79001 01043.510047 91020.150008 2 91070026000",
+              "assignee_name": "Cedente Mock",
+              "assignee_document": "11222333000181",
+              "due_date": "2026-12-31",
+              "original_amount": 10000,
+              "fees": 0,
+              "discount": 0,
+              "total_amount": 10000,
+              "is_payable": true,
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/bills/pay",
+      "method": "POST",
+      "description": "PAY_BILL",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "payment_id": "{{request.body.payload.payment_id}}",
+              "gateway_id": "{{uuid}}",
+              "status": "Completed",
+              "amount": "{{request.body.payload.amount}}",
+              "scheduled_at": null,
+              "paid_at": "2026-01-01T00:00:00",
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/pix/static",
+      "method": "POST",
+      "description": "CREATE_STATIC_PIX_QR",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "external_key": "{{uuid}}",
+              "qr_code_emv": "00020126580014BR.GOV.BCB.PIX",
+              "qr_code_url": "https://partner1.mock/qr/{{uuid}}",
+              "pix_key": "pix-key-mock@partner1.test"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/pix/static/deactivate",
+      "method": "POST",
+      "description": "DEACTIVATE_STATIC_PIX_QR",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {}
+          }
+        }
+      ]
     }
   ]
 }
