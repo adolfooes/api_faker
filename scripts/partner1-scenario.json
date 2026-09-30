@@ -1,0 +1,185 @@
+{
+  "project": {
+    "name": "partner1-mock",
+    "description": "partner1 endpoints for infrapay e2e (charge/refund/consult/boleto/pix/pix_out/transfer)"
+  },
+  "endpoints": [
+    {
+      "path": "/partner1/accounts",
+      "method": "POST",
+      "description": "CREATE_ACCOUNT",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "account_id": "{{uuid}}",
+              "token": "{{uuid}}",
+              "api_key": "{{uuid}}",
+              "status": "active",
+              "created_at": "{{now}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/transactions",
+      "method": "POST",
+      "description": "CREATE_TRANSACTION (charge)",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "transaction_id": "{{request.body.payload.transaction_id}}",
+              "gateway_id": "{{uuid}}",
+              "status": "Confirmed",
+              "authorized_amount": "{{request.body.payload.amount}}",
+              "paid_amount": "{{request.body.payload.amount}}",
+              "paid_at": "2026-01-01T00:00:00",
+              "gateway_fee": 199,
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/refunds",
+      "method": "POST",
+      "description": "REFUND",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "transaction_id": "{{request.body.payload.transaction_id}}",
+              "gateway_refund_id": "{{uuid}}",
+              "status": "Completed",
+              "refunded_amount": "{{request.body.payload.amount}}",
+              "refunded_at": "2026-01-01T00:00:00"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/transactions/query",
+      "method": "GET",
+      "description": "QUERY_TRANSACTION (consult) (GET: connector nao encaminha payload)",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "gateway_transaction_id": "gw_tx_consultado_sem_id_no_get",
+              "status": "Confirmed",
+              "paid_amount": 1000,
+              "paid_at": "2026-01-01T00:00:00",
+              "last_updated": "2026-01-01T00:00:00"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/boletos",
+      "method": "POST",
+      "description": "CREATE_BOLETO",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "transaction_id": "{{request.body.payload.transaction_id}}",
+              "boleto_url": "https://partner1.mock/boleto/{{uuid}}",
+              "barcode": "34191790010104351004791020150008291070026000",
+              "digitable_line": "34191.79001 01043.510047 91020.150008 2 91070026000",
+              "due_date": "2026-12-31",
+              "status": "Generated",
+              "amount": "{{request.body.payload.amount}}",
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/pix",
+      "method": "POST",
+      "description": "CREATE_PIX",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "transaction_id": "{{request.body.payload.transaction_id}}",
+              "qr_code": "{{uuid}}",
+              "qr_code_base64": "aGVsbG8=",
+              "emv": "00020126580014BR.GOV.BCB.PIX",
+              "expires_at": "2026-01-01T00:00:00",
+              "status": "Generated",
+              "amount": "{{request.body.payload.amount}}",
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/pix_out",
+      "method": "POST",
+      "description": "PIX_OUT",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "withdrawal_id": "{{request.body.payload.withdrawal_id}}",
+              "gateway_id": "{{uuid}}",
+              "status": "Completed",
+              "fee": 350,
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/transfers",
+      "method": "POST",
+      "description": "TRANSFER",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "withdrawal_id": "{{request.body.payload.withdrawal_id}}",
+              "gateway_id": "{{uuid}}",
+              "status": "Processing",
+              "fee": 350,
+              "metadata": {}
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
