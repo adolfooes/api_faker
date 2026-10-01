@@ -72,8 +72,8 @@
     },
     {
       "path": "/partner1/transactions/query",
-      "method": "GET",
-      "description": "QUERY_TRANSACTION (consult) (GET: connector nao encaminha payload)",
+      "method": "POST",
+      "description": "QUERY_TRANSACTION (consult) \u2014 POST porque GET nao encaminha payload",
       "statuses": [
         {
           "http_status": 200,
@@ -81,11 +81,13 @@
           "model": {
             "success": true,
             "data": {
-              "gateway_transaction_id": "gw_tx_consultado_sem_id_no_get",
+              "gateway_transaction_id": "{{request.body.payload.gateway_transaction_id}}",
               "status": "Confirmed",
-              "paid_amount": 1000,
+              "paid_amount": 10000,
               "paid_at": "2026-01-01T00:00:00",
-              "last_updated": "2026-01-01T00:00:00"
+              "last_updated": "2026-01-01T00:00:00",
+              "gw_fee_amount": 199,
+              "gw_interest": 0
             }
           }
         }
