@@ -326,6 +326,46 @@
           }
         }
       ]
+    },
+    {
+      "path": "/partner1/documents/status",
+      "method": "POST",
+      "description": "QUERY_DOCUMENT \u2014 documento RECUSADO (o unico desfecho que o fluxo aplica)",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "document_id": "{{request.body.payload.document_id}}",
+              "status": "rejected",
+              "document_type": "identity",
+              "reason": "documento ilegivel"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner2/documents/status",
+      "method": "POST",
+      "description": "QUERY_DOCUMENT \u2014 documento APROVADO (contradiz um webhook de recusa)",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "document_id": "{{request.body.payload.document_id}}",
+              "status": "approved",
+              "document_type": "identity",
+              "reason": null
+            }
+          }
+        }
+      ]
     }
   ]
 }
