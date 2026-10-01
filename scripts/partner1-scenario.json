@@ -265,6 +265,65 @@
           }
         }
       ]
+    },
+    {
+      "path": "/partner1/accounts/status",
+      "method": "POST",
+      "description": "QUERY_ACCOUNT \u2014 consulta ativa de status da subconta",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "is_verified": true,
+              "status": "approved",
+              "reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner2/accounts",
+      "method": "POST",
+      "description": "CREATE_ACCOUNT (partner2)",
+      "statuses": [
+        {
+          "http_status": 201,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "account_id": "{{uuid}}",
+              "token": "{{uuid}}",
+              "api_key": "{{uuid}}",
+              "status": "pending",
+              "created_at": "{{now}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner2/accounts/status",
+      "method": "POST",
+      "description": "QUERY_ACCOUNT (partner2) \u2014 sempre em analise",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "is_verified": false,
+              "status": "in_analysis",
+              "reason": null
+            }
+          }
+        }
+      ]
     }
   ]
 }
