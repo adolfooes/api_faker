@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "partner1-mock",
-    "description": "partner1 endpoints for infrapay e2e (charge/capture/refund/consult/boleto/pix/pix_out/transfer)"
+    "description": "partner1 endpoints for infrapay e2e (charge/capture/refund/consult/boleto/pix/pix_out/transfer/consultas de saida)"
   },
   "endpoints": [
     {
@@ -383,6 +383,44 @@
               "status": "approved",
               "document_type": "identity",
               "reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/withdrawals/query",
+      "method": "POST",
+      "description": "QUERY_WITHDRAWAL - consulta de saque (pix out/ted) pelo nosso id; concluido",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "gateway_id": "gw_wd_{{request.body.payload.reference_id}}",
+              "status": "Completed",
+              "failure_reason": null
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/bill-payments/query",
+      "method": "POST",
+      "description": "QUERY_BILL_PAYMENT - consulta de pagamento de conta pelo nosso id; concluido",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "gateway_id": "gw_bp_{{request.body.payload.reference_id}}",
+              "status": "Completed",
+              "failure_reason": null
             }
           }
         }
