@@ -89,6 +89,25 @@
       ]
     },
     {
+      "path": "/partner1/cards/tokenize",
+      "method": "POST",
+      "description": "TOKENIZE_CARD - troca o token de uso unico do checkout por token reutilizavel do cartao",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "card_token": "card_{{uuid}}",
+              "brand": "visa",
+              "last4": "4242"
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "/partner1/refunds",
       "method": "POST",
       "description": "REFUND",
