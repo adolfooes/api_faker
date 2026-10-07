@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "partner1-mock",
-    "description": "partner1 endpoints for infrapay e2e (charge/refund/consult/boleto/pix/pix_out/transfer)"
+    "description": "partner1 endpoints for infrapay e2e (charge/capture/refund/consult/boleto/pix/pix_out/transfer)"
   },
   "endpoints": [
     {
@@ -44,6 +44,27 @@
               "paid_at": "2026-01-01T00:00:00",
               "gateway_fee": 199,
               "metadata": {}
+            }
+          }
+        }
+      ]
+    },
+    {
+      "path": "/partner1/transactions/capture",
+      "method": "POST",
+      "description": "CAPTURE_TRANSACTION \u2014 captura de cartao autorizado (captura total)",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "gateway_transaction_id": "{{request.body.payload.gateway_transaction_id}}",
+              "status": "Confirmed",
+              "captured_amount": "{{request.body.payload.amount}}",
+              "captured_at": "2026-01-01T00:00:00",
+              "gateway_fee": 0
             }
           }
         }
