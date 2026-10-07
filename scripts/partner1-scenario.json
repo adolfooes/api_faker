@@ -443,6 +443,25 @@
           }
         }
       ]
+    },
+    {
+      "path": "/partner1/received/query",
+      "method": "POST",
+      "description": "QUERY_RECEIVED_PAYMENT - consulta de recebimento (pix estatico/pos); confirma e ecoa o claimed_amount",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "reference": "{{request.body.payload.reference}}",
+              "amount": "{{request.body.payload.claimed_amount}}",
+              "status": "Confirmed"
+            }
+          }
+        }
+      ]
     }
   ]
 }
