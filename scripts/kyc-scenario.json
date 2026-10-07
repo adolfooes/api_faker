@@ -87,6 +87,26 @@
       ]
     },
     {
+      "path": "/iugu/accounts/query",
+      "method": "POST",
+      "description": "QUERY_ACCOUNT - leitura da subconta (GET /v1/accounts/:id na Iugu); verificada",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "id": "{{request.body.payload.partner_account_id}}",
+              "is_verified": true,
+              "last_verification_request_status": "accepted",
+              "last_verification_request_feedback": null
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "/iugu/transactions",
       "method": "POST",
       "description": "CREATE_TRANSACTION",
