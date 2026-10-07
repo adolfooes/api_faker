@@ -71,6 +71,24 @@
       ]
     },
     {
+      "path": "/partner1/transactions/cancel",
+      "method": "POST",
+      "description": "CANCEL_TRANSACTION - cancela cobranca (boleto/pix) ou anula autorizacao de cartao",
+      "statuses": [
+        {
+          "http_status": 200,
+          "percentage": 100,
+          "model": {
+            "success": true,
+            "data": {
+              "gateway_transaction_id": "{{request.body.payload.gateway_transaction_id}}",
+              "status": "Cancelled"
+            }
+          }
+        }
+      ]
+    },
+    {
       "path": "/partner1/refunds",
       "method": "POST",
       "description": "REFUND",
